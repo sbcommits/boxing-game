@@ -2078,16 +2078,6 @@ function fightTick() {
         landAIAttack(fs);
     }
 
-    // Update cooldown visual on offense buttons
-    const onCooldown = now < fs.lastPlayerPunch + fs.playerCooldown;
-    const ctrlEl = document.getElementById('fight-controls');
-    if (ctrlEl) {
-        ctrlEl.querySelectorAll('.ctrl-offense .ctrl-btn:not(.ctrl-body)').forEach(function(btn) {
-            if (onCooldown || fs.playerStamina < 4) btn.classList.add('on-cooldown');
-            else btn.classList.remove('on-cooldown');
-        });
-    }
-
     updateFightHUD();
 }
 
@@ -2487,21 +2477,18 @@ function defend(type) {
     if (!fs || fs.isOver || fs.paused) return;
     const now = Date.now();
 
-    // Block hold mechanics
-    if (type === 'blockStart') {
+    // Block mechanics (from swipe: single 'block' action)
+    if (type === 'block' || type === 'blockStart') {
         fs.blocking = true;
         const gl = document.getElementById('glove-left');
         const gr = document.getElementById('glove-right');
         if (gl) gl.className = 'glove glove-left blocking';
         if (gr) gr.className = 'glove glove-right blocking';
-        const btn = document.getElementById('btn-block');
-        if (btn) btn.classList.add('active-block');
 
         // If attack incoming, check block
         if (fs.defendWindow && !fs.defended && fs.aiCurrentAttack) {
             const attack = fs.aiCurrentAttack;
             if (attack.blockable) {
-                // Good block
                 fs.defended = true;
                 hideIncoming();
                 resetOppPose();
@@ -2512,7 +2499,6 @@ function defend(type) {
                 showHitText('BLOCKED!', 'block-text');
                 fs.playerStamina = Math.max(0, fs.playerStamina - 3);
             } else {
-                // Can't block this (uppercut) — partial block
                 fs.defended = true;
                 hideIncoming();
 
@@ -2530,14 +2516,17 @@ function defend(type) {
                 fs.aiNextAttack = now + fs.aiAttackInterval;
             }
         }
+
+        // Auto-release block after short delay (swipe = tap, not hold)
+        setTimeout(function() {
+            if (fs) { fs.blocking = false; resetGloves(); }
+        }, 500);
         return;
     }
 
     if (type === 'blockEnd') {
         fs.blocking = false;
         resetGloves();
-        const btn = document.getElementById('btn-block');
-        if (btn) btn.classList.remove('active-block');
         return;
     }
 
@@ -2551,24 +2540,24 @@ function defend(type) {
     const attack = fs.aiCurrentAttack;
     fs.defended = true;
 
-    if (type === attack.slip) {
-        // Perfect slip/lean!
+    // Check if correct defense move
+    const correctSlip = (type === attack.slip) ||
+        (attack.slip === 'lean' && (type === 'slipL' || type === 'slipR'));
+
+    if (correctSlip) {
+        // Perfect slip!
         hideIncoming();
         resetOppPose();
         fs.aiCurrentAttack = null;
         fs.defendWindow = false;
-        fs.counterWindow = now + 1400; // 1.4s counter window
+        fs.counterWindow = now + 1400;
         fs.aiNextAttack = now + fs.aiAttackInterval;
 
-        if (type === 'lean') {
-            showHitText('LEAN BACK! COUNTER!', 'slip-text');
-        } else {
-            showHitText('SLIPPED! COUNTER!', 'slip-text');
-        }
+        showHitText('SLIPPED! COUNTER!', 'slip-text');
         fs.playerStamina = Math.max(0, fs.playerStamina - 3);
     } else {
-        // Wrong slip direction — doesn't help
-        fs.defended = false; // let the punch land
+        // Wrong slip direction
+        fs.defended = false;
         showHitText('WRONG SIDE!', 'miss');
     }
 

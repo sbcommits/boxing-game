@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#111111">
+    <title>Boxing Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Welcome Screen -->
+    <div id="screen-welcome" class="screen active">
+        <div class="screen-content">
+            <div class="logo-area">
+                <div class="glove-icon">&#129354;</div>
+                <h1 class="game-title">BOXING<br>GAME</h1>
+                <p class="tagline">Step into the ring</p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="showScreen('screen-signup')">SIGN UP</button>
+                <button class="btn btn-secondary" onclick="showScreen('screen-login')">LOGIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sign Up Screen -->
+    <div id="screen-signup" class="screen">
+        <div class="screen-content">
+            <button class="btn-back" onclick="showScreen('screen-welcome')">&larr; Back</button>
+            <h2>CREATE ACCOUNT</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="signup-username" placeholder="4-12 chars, letters & numbers" maxlength="12" autocomplete="off">
+                <span class="hint">4-12 characters, alphanumeric only</span>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="signup-password" placeholder="Enter password" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="signup-confirm" placeholder="Confirm password" autocomplete="new-password">
+            </div>
+            <div id="signup-error" class="error-msg"></div>
+            <button class="btn btn-primary" onclick="handleSignup()">CREATE ACCOUNT</button>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="screen-login" class="screen">
+        <div class="screen-content">
+            <button class="btn-back" onclick="showScreen('screen-welcome')">&larr; Back</button>
+            <h2>LOGIN</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="login-username" placeholder="Username" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+            </div>
+            <div id="login-error" class="error-msg"></div>
+            <button class="btn btn-primary" onclick="handleLogin()">LOGIN</button>
+        </div>
+    </div>
+
+    <!-- Fighter Creation Screen -->
+    <div id="screen-create" class="screen">
+        <div class="screen-content">
+            <h2>CREATE YOUR FIGHTER</h2>
+            <div id="create-steps">
+                <!-- Step indicators -->
+                <div class="step-indicators">
+                    <div class="step-dot active" data-step="1">1</div>
+                    <div class="step-line"></div>
+                    <div class="step-dot" data-step="2">2</div>
+                    <div class="step-line"></div>
+                    <div class="step-dot" data-step="3">3</div>
+                    <div class="step-line"></div>
+                    <div class="step-dot" data-step="4">4</div>
+                </div>
+
+                <!-- Step 1: Physical Build -->
+                <div id="create-step-1" class="create-step active">
+                    <h3>PHYSICAL BUILD</h3>
+                    <div class="slider-group">
+                        <label>Height: <span id="height-display">5'10"</span></label>
+                        <input type="range" id="height-slider" min="58" max="79" value="70" oninput="updatePhysical()">
+                        <div class="slider-labels"><span>4'10"</span><span>6'7"</span></div>
+                    </div>
+                    <div class="slider-group">
+                        <label>Weight: <span id="weight-display">160 lbs</span></label>
+                        <input type="range" id="weight-slider" min="108" max="240" value="160" oninput="updatePhysical()">
+                        <div class="slider-labels"><span>108 lbs</span><span>240 lbs</span></div>
+                    </div>
+                    <div class="weight-class-badge" id="weight-class-display">MIDDLEWEIGHT</div>
+                    <div id="height-warning" class="warning-msg"></div>
+                    <button class="btn btn-primary" onclick="nextStep(2)">NEXT &rarr;</button>
+                </div>
+
+                <!-- Step 2: Appearance -->
+                <div id="create-step-2" class="create-step">
+                    <h3>APPEARANCE</h3>
+
+                    <div class="appearance-section">
+                        <label>Skin Tone</label>
+                        <div class="color-options" id="skin-options">
+                            <div class="color-swatch active" data-value="#FDDBB4" style="background:#FDDBB4" onclick="selectOption(this,'skin')"></div>
+                            <div class="color-swatch" data-value="#E8B88A" style="background:#E8B88A" onclick="selectOption(this,'skin')"></div>
+                            <div class="color-swatch" data-value="#C68642" style="background:#C68642" onclick="selectOption(this,'skin')"></div>
+                            <div class="color-swatch" data-value="#8D5524" style="background:#8D5524" onclick="selectOption(this,'skin')"></div>
+                            <div class="color-swatch" data-value="#5C3A1E" style="background:#5C3A1E" onclick="selectOption(this,'skin')"></div>
+                            <div class="color-swatch" data-value="#3B2210" style="background:#3B2210" onclick="selectOption(this,'skin')"></div>
+                        </div>
+                    </div>
+
+                    <div class="appearance-section">
+                        <label>Hair Style</label>
+                        <div class="option-grid" id="hair-options">
+                            <div class="option-btn active" data-value="Bald" onclick="selectOption(this,'hair')">Bald</div>
+                            <div class="option-btn" data-value="Short" onclick="selectOption(this,'hair')">Short</div>
+                            <div class="option-btn" data-value="Cornrows" onclick="selectOption(this,'hair')">Cornrows</div>
+                            <div class="option-btn" data-value="Afro" onclick="selectOption(this,'hair')">Afro</div>
+                            <div class="option-btn" data-value="Buzz Cut" onclick="selectOption(this,'hair')">Buzz Cut</div>
+                            <div class="option-btn" data-value="Long" onclick="selectOption(this,'hair')">Long</div>
+                        </div>
+                    </div>
+
+                    <div class="appearance-section">
+                        <label>Body Type: <span id="body-type-display">Athletic</span></label>
+                        <span class="hint">Auto-determined by height/weight</span>
+                    </div>
+
+                    <div class="appearance-section">
+                        <label>Trunks Color</label>
+                        <div class="color-options" id="trunks-options">
+                            <div class="color-swatch active" data-value="#FF0000" style="background:#FF0000" onclick="selectOption(this,'trunks')"></div>
+                            <div class="color-swatch" data-value="#0066FF" style="background:#0066FF" onclick="selectOption(this,'trunks')"></div>
+                            <div class="color-swatch" data-value="#FFD700" style="background:#FFD700" onclick="selectOption(this,'trunks')"></div>
+                            <div class="color-swatch" data-value="#00CC00" style="background:#00CC00" onclick="selectOption(this,'trunks')"></div>
+                            <div class="color-swatch" data-value="#FFFFFF" style="background:#FFFFFF" onclick="selectOption(this,'trunks')"></div>
+                            <div class="color-swatch" data-value="#FF00FF" style="background:#FF00FF" onclick="selectOption(this,'trunks')"></div>
+                            <div class="color-swatch" data-value="#000000" style="background:#000000;border:1px solid #555" onclick="selectOption(this,'trunks')"></div>
+                            <div class="color-swatch" data-value="#FF6600" style="background:#FF6600" onclick="selectOption(this,'trunks')"></div>
+                        </div>
+                    </div>
+
+                    <div class="appearance-section">
+                        <label>Tattoos</label>
+                        <div class="option-grid" id="tattoo-options">
+                            <div class="option-btn active" data-value="None" onclick="selectOption(this,'tattoo')">None</div>
+                            <div class="option-btn" data-value="Left Arm" onclick="selectOption(this,'tattoo')">Left Arm</div>
+                            <div class="option-btn" data-value="Right Arm" onclick="selectOption(this,'tattoo')">Right Arm</div>
+                            <div class="option-btn" data-value="Both Arms" onclick="selectOption(this,'tattoo')">Both Arms</div>
+                            <div class="option-btn" data-value="Chest" onclick="selectOption(this,'tattoo')">Chest</div>
+                            <div class="option-btn" data-value="Full Body" onclick="selectOption(this,'tattoo')">Full Body</div>
+                        </div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-secondary" onclick="nextStep(1)">&larr; BACK</button>
+                        <button class="btn btn-primary" onclick="nextStep(3)">NEXT &rarr;</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Fighting Style -->
+                <div id="create-step-3" class="create-step">
+                    <h3>FIGHTING STYLE</h3>
+                    <div class="style-grid" id="style-options">
+                        <div class="style-card" data-style="Brawler" onclick="selectStyle(this)">
+                            <div class="style-name">Brawler</div>
+                            <div class="style-bonus">+3 Power, Chin</div>
+                            <div class="style-penalty">-2 Speed, Agility</div>
+                        </div>
+                        <div class="style-card" data-style="Counter-Puncher" onclick="selectStyle(this)">
+                            <div class="style-name">Counter-Puncher</div>
+                            <div class="style-bonus">+3 Ring IQ, Defense</div>
+                            <div class="style-penalty">-2 Power, Stamina</div>
+                        </div>
+                        <div class="style-card" data-style="Swarmer" onclick="selectStyle(this)">
+                            <div class="style-name">Swarmer</div>
+                            <div class="style-bonus">+3 Speed, Stamina</div>
+                            <div class="style-penalty">-2 Power, Defense</div>
+                        </div>
+                        <div class="style-card" data-style="Boxer-Puncher" onclick="selectStyle(this)">
+                            <div class="style-name">Boxer-Puncher</div>
+                            <div class="style-bonus">+3 Power, Speed</div>
+                            <div class="style-penalty">-2 Chin, Stamina</div>
+                        </div>
+                        <div class="style-card" data-style="Elusive" onclick="selectStyle(this)">
+                            <div class="style-name">Elusive</div>
+                            <div class="style-bonus">+3 Agility, Speed</div>
+                            <div class="style-penalty">-2 Power, Chin</div>
+                        </div>
+                        <div class="style-card" data-style="Slugger" onclick="selectStyle(this)">
+                            <div class="style-name">Slugger</div>
+                            <div class="style-bonus">+3 Power, Chin</div>
+                            <div class="style-penalty">-2 Agility, Ring IQ</div>
+                        </div>
+                        <div class="style-card" data-style="Philly Shell" onclick="selectStyle(this)">
+                            <div class="style-name">Philly Shell</div>
+                            <div class="style-bonus">+3 Defense, Agility</div>
+                            <div class="style-penalty">-2 Stamina, Power</div>
+                        </div>
+                        <div class="style-card" data-style="Pressure Fighter" onclick="selectStyle(this)">
+                            <div class="style-name">Pressure Fighter</div>
+                            <div class="style-bonus">+3 Stamina, Chin</div>
+                            <div class="style-penalty">-2 Agility, Ring IQ</div>
+                        </div>
+                        <div class="style-card" data-style="Technician" onclick="selectStyle(this)">
+                            <div class="style-name">Technician</div>
+                            <div class="style-bonus">+3 Ring IQ, Speed</div>
+                            <div class="style-penalty">-2 Power, Chin</div>
+                        </div>
+                        <div class="style-card" data-style="Switch Hitter" onclick="selectStyle(this)">
+                            <div class="style-name">Switch Hitter</div>
+                            <div class="style-bonus">+3 Agility, Ring IQ</div>
+                            <div class="style-penalty">-2 Defense, Power</div>
+                        </div>
+                    </div>
+                    <div id="style-error" class="error-msg"></div>
+                    <div class="btn-row">
+                        <button class="btn btn-secondary" onclick="nextStep(2)">&larr; BACK</button>
+                        <button class="btn btn-primary" onclick="nextStep(4)">NEXT &rarr;</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Stats -->
+                <div id="create-step-4" class="create-step">
+                    <h3>DISTRIBUTE STATS</h3>
+                    <div class="points-remaining">Points Remaining: <span id="points-left">70</span> / 70</div>
+
+                    <div id="stat-allocators">
+                        <!-- Generated by JS -->
+                    </div>
+
+                    <div id="debuff-summary" class="debuff-box"></div>
+                    <div id="stats-error" class="error-msg"></div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-secondary" onclick="nextStep(3)">&larr; BACK</button>
+                        <button class="btn btn-primary" onclick="finalizeFighter()">CREATE FIGHTER</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fighter Profile Screen -->
+    <div id="screen-profile" class="screen">
+        <div class="screen-content">
+            <div class="profile-header">
+                <div class="fighter-avatar" id="profile-avatar"></div>
+                <h2 id="profile-name"></h2>
+                <div class="weight-class-badge" id="profile-weight-class"></div>
+                <div class="profile-record" id="profile-record">0 - 0 - 0 KO</div>
+            </div>
+
+            <div class="profile-section">
+                <div class="level-bar">
+                    <span>Level <span id="profile-level">1</span></span>
+                    <div class="xp-bar"><div class="xp-fill" id="profile-xp-fill"></div></div>
+                    <span id="profile-xp-text">0 / 100 XP</span>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Physical</h3>
+                <div class="info-row"><span>Height</span><span id="profile-height"></span></div>
+                <div class="info-row"><span>Weight</span><span id="profile-weight"></span></div>
+                <div class="info-row"><span>Style</span><span id="profile-style"></span></div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Stats</h3>
+                <div id="profile-stats"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary btn-fight" onclick="showScreen('screen-matchmaking')">FIND A FIGHT</button>
+                <button class="btn btn-primary" onclick="showScreen('screen-gym')">GO TO GYM</button>
+                <button class="btn btn-secondary" onclick="handleLogout()">LOGOUT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gym Screen -->
+    <div id="screen-gym" class="screen">
+        <div class="screen-content">
+            <button class="btn-back" onclick="showScreen('screen-profile')">&larr; Back to Profile</button>
+            <h2>THE GYM</h2>
+            <div class="energy-bar" id="energy-bar">&#9889; 5/5 Energy</div>
+            <div class="gym-grid" id="gym-grid">
+                <!-- Generated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mini-Game Screen (full-screen overlay) -->
+    <div id="screen-minigame" class="screen">
+        <div class="minigame-container" id="minigame-container">
+            <!-- Dynamically filled by each mini-game -->
+        </div>
+    </div>
+
+    <!-- Training Results Screen -->
+    <div id="screen-results" class="screen">
+        <div class="screen-content results-content">
+            <div id="results-medal" class="results-medal"></div>
+            <div id="results-score" class="results-score"></div>
+            <div id="results-xp" class="results-xp"></div>
+            <div id="results-progress" class="results-progress"></div>
+            <button class="btn btn-primary" onclick="backToGym()">BACK TO GYM</button>
+        </div>
+    </div>
+
+    <!-- Matchmaking Screen -->
+    <div id="screen-matchmaking" class="screen">
+        <div class="screen-content">
+            <button class="btn-back" onclick="showScreen('screen-profile')">&larr; Back to Profile</button>
+            <h2>FIND A FIGHT</h2>
+            <div class="matchmaking-info" id="mm-info"></div>
+            <div class="opponent-list" id="opponent-list">
+                <!-- Generated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Pre-Fight Screen -->
+    <div id="screen-prefight" class="screen">
+        <div class="screen-content">
+            <div class="prefight-card">
+                <div class="prefight-vs">
+                    <div class="prefight-fighter">
+                        <div class="fighter-avatar prefight-avatar" id="prefight-player-avatar"></div>
+                        <div class="prefight-name" id="prefight-player-name"></div>
+                        <div class="prefight-record" id="prefight-player-record"></div>
+                    </div>
+                    <div class="prefight-vs-text">VS</div>
+                    <div class="prefight-fighter">
+                        <div class="fighter-avatar prefight-avatar" id="prefight-opp-avatar"></div>
+                        <div class="prefight-name" id="prefight-opp-name"></div>
+                        <div class="prefight-record" id="prefight-opp-record"></div>
+                    </div>
+                </div>
+                <div class="prefight-details">
+                    <div class="weight-class-badge" id="prefight-weight-class"></div>
+                    <div id="prefight-rounds">12 ROUNDS</div>
+                </div>
+                <button class="btn btn-primary btn-fight btn-large" onclick="startFight()">FIGHT!</button>
+                <button class="btn btn-secondary" onclick="showScreen('screen-matchmaking')">PICK DIFFERENT OPPONENT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fight Screen (Undisputed-style first person) -->
+    <div id="screen-fight" class="screen">
+        <div class="fight-content">
+            <!-- Top HUD -->
+            <div class="fight-hud">
+                <div class="fight-hud-fighter">
+                    <div class="fight-name" id="fight-player-name"></div>
+                    <div class="fight-hp-bar"><div class="fight-hp-fill player-hp" id="fight-player-hp"></div></div>
+                    <div class="fight-stamina-bar"><div class="fight-stamina-fill" id="fight-player-stamina"></div></div>
+                </div>
+                <div class="fight-round-display">
+                    <div class="fight-round-label">ROUND</div>
+                    <div class="fight-round-num" id="fight-round-num">1</div>
+                    <div class="fight-timer" id="fight-timer">30</div>
+                </div>
+                <div class="fight-hud-fighter">
+                    <div class="fight-name" id="fight-opp-name"></div>
+                    <div class="fight-hp-bar"><div class="fight-hp-fill opp-hp" id="fight-opp-hp"></div></div>
+                    <div class="fight-stamina-bar"><div class="fight-stamina-fill" id="fight-opp-stamina"></div></div>
+                </div>
+            </div>
+
+            <!-- First-Person Arena -->
+            <div class="fight-arena" id="fight-arena">
+                <!-- Ring background -->
+                <div class="ring-bg">
+                    <div class="ring-rope rope-1"></div>
+                    <div class="ring-rope rope-2"></div>
+                    <div class="ring-rope rope-3"></div>
+                    <div class="ring-floor"></div>
+                </div>
+
+                <!-- Opponent (facing you, large, centered) -->
+                <div class="opp-fighter" id="opp-fighter">
+                    <div class="opp-head" id="opp-head">
+                        <div class="opp-head-inner" id="opp-head-inner"></div>
+                    </div>
+                    <div class="opp-body-zone" id="opp-body-zone">
+                        <div class="opp-guard opp-guard-l" id="opp-guard-l"></div>
+                        <div class="opp-guard opp-guard-r" id="opp-guard-r"></div>
+                        <div class="opp-torso" id="opp-torso"></div>
+                    </div>
+                </div>
+
+                <!-- Incoming attack indicator -->
+                <div class="incoming-indicator" id="incoming-indicator"></div>
+
+                <!-- Damage / action text -->
+                <div class="fight-hit-text" id="fight-hit-text"></div>
+                <div class="fight-combo" id="fight-combo"></div>
+
+                <!-- Flash overlay -->
+                <div class="fight-flash" id="fight-flash"></div>
+
+                <!-- Your gloves (first person) -->
+                <div class="player-gloves">
+                    <div class="glove glove-left" id="glove-left"></div>
+                    <div class="glove glove-right" id="glove-right"></div>
+                </div>
+            </div>
+
+            <!-- Two-Thumb Controls -->
+            <div class="fight-controls" id="fight-controls">
+                <!-- Left side: Defense -->
+                <div class="ctrl-defense">
+                    <div class="ctrl-row">
+                        <button class="ctrl-btn ctrl-slip-l" onpointerdown="defend('slipL')" ontouchstart="">SLIP &#9664;</button>
+                        <button class="ctrl-btn ctrl-slip-r" onpointerdown="defend('slipR')" ontouchstart="">SLIP &#9654;</button>
+                    </div>
+                    <button class="ctrl-btn ctrl-block" id="btn-block"
+                        onpointerdown="defend('blockStart')"
+                        onpointerup="defend('blockEnd')"
+                        onpointerleave="defend('blockEnd')"
+                        ontouchstart="">BLOCK</button>
+                    <button class="ctrl-btn ctrl-lean" onpointerdown="defend('lean')" ontouchstart="">LEAN BACK</button>
+                </div>
+
+                <!-- Right side: Offense -->
+                <div class="ctrl-offense">
+                    <div class="ctrl-row">
+                        <button class="ctrl-btn ctrl-jab" onpointerdown="throwPunch('jab')" ontouchstart="">JAB</button>
+                        <button class="ctrl-btn ctrl-cross" onpointerdown="throwPunch('cross')" ontouchstart="">CROSS</button>
+                    </div>
+                    <div class="ctrl-row">
+                        <button class="ctrl-btn ctrl-hook" onpointerdown="throwPunch('hook')" ontouchstart="">HOOK</button>
+                        <button class="ctrl-btn ctrl-upper" onpointerdown="throwPunch('uppercut')" ontouchstart="">UPPER</button>
+                    </div>
+                    <button class="ctrl-btn ctrl-body" id="btn-body"
+                        onpointerdown="toggleBody(true)"
+                        onpointerup="toggleBody(false)"
+                        onpointerleave="toggleBody(false)"
+                        ontouchstart="">&#9660; BODY</button>
+                </div>
+            </div>
+
+            <div class="fight-scorecard" id="fight-scorecard"></div>
+        </div>
+    </div>
+
+    <!-- Fight Result Screen -->
+    <div id="screen-fight-result" class="screen">
+        <div class="screen-content results-content">
+            <div id="fight-result-banner" class="fight-result-banner"></div>
+            <div id="fight-result-method" class="fight-result-method"></div>
+            <div id="fight-result-scorecard" class="fight-result-scorecard"></div>
+            <div id="fight-result-stats" class="fight-result-stats"></div>
+            <div id="fight-result-xp" class="fight-result-xp"></div>
+            <button class="btn btn-primary" onclick="showScreen('screen-profile')">BACK TO PROFILE</button>
+        </div>
+    </div>
+
+    <!-- Level Up Modal -->
+    <div id="levelup-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h2>LEVEL UP!</h2>
+            <p>You reached Level <span id="levelup-level"></span>!</p>
+            <p>You have <span id="levelup-points">3</span> bonus stat points to distribute.</p>
+            <div id="levelup-stats"></div>
+            <div id="levelup-error" class="error-msg"></div>
+            <button class="btn btn-primary" onclick="applyLevelUpPoints()">APPLY POINTS</button>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>

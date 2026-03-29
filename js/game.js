@@ -1963,6 +1963,9 @@ function startFight() {
     // Style opponent based on their appearance
     styleOpponent();
 
+    // Initialize swipe controls
+    initSwipeControls();
+
     updateFightHUD();
     updateScorecard();
     resetOppPose();
@@ -2171,6 +2174,182 @@ function toggleBody(on) {
     if (btn) {
         if (on) btn.classList.add('body-active');
         else btn.classList.remove('body-active');
+    }
+}
+
+// ===== SWIPE CONTROLS =====
+
+const SWIPE_THRESHOLD = 30; // pixels to count as swipe vs tap
+const TAP_MAX_TIME = 250;   // ms max for a tap
+
+function initSwipeControls() {
+    setupZone('zone-left', 'left');
+    setupZone('zone-right', 'right');
+    setupZone('zone-defense', 'defense');
+}
+
+function setupZone(elementId, zone) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    let touches = {};
+
+    el.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            touches[t.identifier] = {
+                startX: t.clientX,
+                startY: t.clientY,
+                startTime: Date.now()
+            };
+        }
+
+        // Two-finger tap detection for block (defense zone only)
+        if (zone === 'defense' && e.touches.length >= 2) {
+            handleDefenseAction('block');
+        }
+    }, { passive: false });
+
+    el.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+
+    el.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            const start = touches[t.identifier];
+            if (!start) continue;
+
+            const dx = t.clientX - start.startX;
+            const dy = t.clientY - start.startY;
+            const dt = Date.now() - start.startTime;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (zone === 'defense') {
+                // Defense zone: swipe left/right = slip, two-finger tap = block (handled in touchstart)
+                if (dist >= SWIPE_THRESHOLD) {
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        handleDefenseAction(dx < 0 ? 'slipL' : 'slipR');
+                    }
+                }
+            } else {
+                // Offense zone (left or right hand)
+                if (dist < SWIPE_THRESHOLD && dt < TAP_MAX_TIME) {
+                    // Tap = quick punch (jab for left, cross for right)
+                    handlePunchAction(zone === 'left' ? 'jab' : 'cross', zone);
+                } else if (dist >= SWIPE_THRESHOLD) {
+                    // Determine swipe direction
+                    if (Math.abs(dy) > Math.abs(dx)) {
+                        if (dy < 0) {
+                            // Swipe up = uppercut
+                            handlePunchAction(zone === 'left' ? 'uppercut_l' : 'uppercut_r', zone);
+                        } else {
+                            // Swipe down = body shot
+                            handlePunchAction(zone === 'left' ? 'body_l' : 'body_r', zone);
+                        }
+                    } else {
+                        // Swipe horizontal = hook
+                        handlePunchAction(zone === 'left' ? 'hook_l' : 'hook_r', zone);
+                    }
+                }
+            }
+
+            delete touches[t.identifier];
+        }
+    }, { passive: false });
+
+    el.addEventListener('touchcancel', function(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            delete touches[e.changedTouches[i].identifier];
+        }
+    });
+
+    // Mouse fallback for desktop testing
+    let mouseStart = null;
+    el.addEventListener('mousedown', function(e) {
+        mouseStart = { x: e.clientX, y: e.clientY, time: Date.now() };
+    });
+    el.addEventListener('mouseup', function(e) {
+        if (!mouseStart) return;
+        const dx = e.clientX - mouseStart.x;
+        const dy = e.clientY - mouseStart.y;
+        const dt = Date.now() - mouseStart.time;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (zone === 'defense') {
+            if (dist >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+                handleDefenseAction(dx < 0 ? 'slipL' : 'slipR');
+            } else if (dist < SWIPE_THRESHOLD) {
+                handleDefenseAction('block');
+            }
+        } else {
+            if (dist < SWIPE_THRESHOLD && dt < TAP_MAX_TIME) {
+                handlePunchAction(zone === 'left' ? 'jab' : 'cross', zone);
+            } else if (dist >= SWIPE_THRESHOLD) {
+                if (Math.abs(dy) > Math.abs(dx)) {
+                    if (dy < 0) handlePunchAction(zone === 'left' ? 'uppercut_l' : 'uppercut_r', zone);
+                    else handlePunchAction(zone === 'left' ? 'body_l' : 'body_r', zone);
+                } else {
+                    handlePunchAction(zone === 'left' ? 'hook_l' : 'hook_r', zone);
+                }
+            }
+        }
+        mouseStart = null;
+    });
+}
+
+function handlePunchAction(action, zone) {
+    const feedbackEl = document.getElementById('feedback-' + zone);
+    const zoneEl = document.getElementById('zone-' + zone);
+    const labels = {
+        jab: 'JAB', cross: 'CROSS',
+        hook_l: 'L HOOK', hook_r: 'R HOOK',
+        uppercut_l: 'L UPPER', uppercut_r: 'R UPPER',
+        body_l: 'L BODY', body_r: 'R BODY'
+    };
+
+    // Map to punch engine types
+    const typeMap = {
+        jab: 'jab', cross: 'cross',
+        hook_l: 'hook', hook_r: 'hook',
+        uppercut_l: 'uppercut', uppercut_r: 'uppercut',
+        body_l: 'body', body_r: 'body'
+    };
+
+    // Show feedback
+    showZoneFeedback(feedbackEl, zoneEl, labels[action] || action.toUpperCase(),
+        zone === 'left' ? '#66AAFF' : '#FF6666');
+
+    // Throw the punch
+    throwPunch(typeMap[action]);
+}
+
+function handleDefenseAction(action) {
+    const feedbackEl = document.getElementById('feedback-defense');
+    const zoneEl = document.getElementById('zone-defense');
+    const labels = { slipL: 'SLIP \u25C0', slipR: 'SLIP \u25B6', block: 'BLOCK' };
+
+    showZoneFeedback(feedbackEl, zoneEl, labels[action] || action.toUpperCase(), '#44CC66');
+    defend(action);
+}
+
+function showZoneFeedback(feedbackEl, zoneEl, text, color) {
+    if (feedbackEl) {
+        feedbackEl.textContent = text;
+        feedbackEl.style.color = color;
+        feedbackEl.classList.remove('show');
+        void feedbackEl.offsetWidth; // force reflow
+        feedbackEl.classList.add('show');
+        clearTimeout(feedbackEl._t);
+        feedbackEl._t = setTimeout(function() { feedbackEl.classList.remove('show'); }, 400);
+    }
+    if (zoneEl) {
+        zoneEl.classList.remove('zone-flash');
+        void zoneEl.offsetWidth;
+        zoneEl.classList.add('zone-flash');
+        setTimeout(function() { zoneEl.classList.remove('zone-flash'); }, 200);
     }
 }
 

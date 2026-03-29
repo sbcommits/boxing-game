@@ -415,37 +415,24 @@
                 </div>
             </div>
 
-            <!-- Two-Thumb Controls -->
-            <div class="fight-controls" id="fight-controls">
-                <!-- Left side: Defense -->
-                <div class="ctrl-defense">
-                    <div class="ctrl-row">
-                        <button class="ctrl-btn ctrl-slip-l" onpointerdown="defend('slipL')" ontouchstart="">SLIP &#9664;</button>
-                        <button class="ctrl-btn ctrl-slip-r" onpointerdown="defend('slipR')" ontouchstart="">SLIP &#9654;</button>
+            <!-- Swipe Controls -->
+            <div class="swipe-controls" id="swipe-controls">
+                <div class="swipe-zone-row">
+                    <div class="swipe-zone zone-left" id="zone-left">
+                        <div class="zone-label">LEFT HAND</div>
+                        <div class="zone-hint">tap: jab | swipe: hook/upper/body</div>
+                        <div class="zone-feedback" id="feedback-left"></div>
                     </div>
-                    <button class="ctrl-btn ctrl-block" id="btn-block"
-                        onpointerdown="defend('blockStart')"
-                        onpointerup="defend('blockEnd')"
-                        onpointerleave="defend('blockEnd')"
-                        ontouchstart="">BLOCK</button>
-                    <button class="ctrl-btn ctrl-lean" onpointerdown="defend('lean')" ontouchstart="">LEAN BACK</button>
+                    <div class="swipe-zone zone-right" id="zone-right">
+                        <div class="zone-label">RIGHT HAND</div>
+                        <div class="zone-hint">tap: cross | swipe: hook/upper/body</div>
+                        <div class="zone-feedback" id="feedback-right"></div>
+                    </div>
                 </div>
-
-                <!-- Right side: Offense -->
-                <div class="ctrl-offense">
-                    <div class="ctrl-row">
-                        <button class="ctrl-btn ctrl-jab" onpointerdown="throwPunch('jab')" ontouchstart="">JAB</button>
-                        <button class="ctrl-btn ctrl-cross" onpointerdown="throwPunch('cross')" ontouchstart="">CROSS</button>
-                    </div>
-                    <div class="ctrl-row">
-                        <button class="ctrl-btn ctrl-hook" onpointerdown="throwPunch('hook')" ontouchstart="">HOOK</button>
-                        <button class="ctrl-btn ctrl-upper" onpointerdown="throwPunch('uppercut')" ontouchstart="">UPPER</button>
-                    </div>
-                    <button class="ctrl-btn ctrl-body" id="btn-body"
-                        onpointerdown="toggleBody(true)"
-                        onpointerup="toggleBody(false)"
-                        onpointerleave="toggleBody(false)"
-                        ontouchstart="">&#9660; BODY</button>
+                <div class="swipe-zone zone-defense" id="zone-defense">
+                    <div class="zone-label">DEFENSE</div>
+                    <div class="zone-hint">swipe: slip | two-finger tap: block</div>
+                    <div class="zone-feedback" id="feedback-defense"></div>
                 </div>
             </div>
 

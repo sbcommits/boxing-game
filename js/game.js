@@ -1966,6 +1966,13 @@ function startFight() {
     // Initialize swipe controls
     initSwipeControls();
 
+    // Try to lock to landscape
+    try {
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(function() {});
+        }
+    } catch(e) {}
+
     updateFightHUD();
     updateScorecard();
     resetOppPose();

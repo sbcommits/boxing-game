@@ -1869,48 +1869,124 @@ input[type="range"]::-moz-range-thumb {
     animation: hpPulse 0.5s ease infinite alternate;
 }
 
-/* ===== FIRST-PERSON ARENA (FULL SCREEN) ===== */
+/* ===== FIRST-PERSON ARENA (FULL SCREEN, 3D) ===== */
 .fight-arena {
     position: absolute;
     inset: 0;
-    background: #0a0a12;
+    background: radial-gradient(ellipse at 50% 20%, #1a1528 0%, #0a0810 60%, #050408 100%);
     overflow: hidden;
     border: none;
     border-radius: 0;
+    perspective: 600px;
 }
 
-/* Ring background */
+/* Crowd / arena atmosphere */
 .ring-bg {
     position: absolute;
     inset: 0;
     overflow: hidden;
 }
 
+.ring-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -10%;
+    right: -10%;
+    height: 35%;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,200,50,0.08) 0%, transparent 60%),
+        repeating-linear-gradient(90deg,
+            rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.03) 3px,
+            rgba(100,100,150,0.02) 6px, rgba(255,255,255,0.01) 9px);
+    opacity: 0.8;
+}
+
+/* Arena spotlight */
+.ring-bg::after {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: 30%;
+    right: 30%;
+    height: 50%;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,240,200,0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* 3D Ring Floor */
 .ring-floor {
     position: absolute;
     bottom: 0;
-    left: -10%;
-    right: -10%;
-    height: 45%;
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    transform: perspective(400px) rotateX(25deg);
-    transform-origin: bottom;
-    border-top: 2px solid rgba(255,255,255,0.08);
+    left: -20%;
+    right: -20%;
+    height: 50%;
+    background:
+        linear-gradient(180deg,
+            rgba(20,25,50,0.0) 0%,
+            rgba(25,35,65,0.95) 15%,
+            rgba(20,40,80,0.98) 40%,
+            rgba(15,45,90,1) 100%);
+    transform: perspective(500px) rotateX(30deg);
+    transform-origin: bottom center;
+    border-top: 1px solid rgba(255,255,255,0.06);
 }
 
+/* Floor canvas texture */
+.ring-floor::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-linear-gradient(0deg, transparent, transparent 18px, rgba(255,255,255,0.02) 18px, rgba(255,255,255,0.02) 19px),
+        repeating-linear-gradient(90deg, transparent, transparent 18px, rgba(255,255,255,0.02) 18px, rgba(255,255,255,0.02) 19px);
+}
+
+/* Floor center circle / spotlight reflection */
+.ring-floor::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50%;
+    height: 40%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(255,240,200,0.06) 0%, transparent 70%);
+}
+
+/* Ropes with 3D depth */
 .ring-rope {
     position: absolute;
     left: 0;
     right: 0;
-    height: 2px;
     z-index: 1;
+    height: 3px;
+    border-radius: 2px;
 }
 
-.rope-1 { top: 8%; background: rgba(255,50,50,0.5); }
-.rope-2 { top: 18%; background: rgba(255,255,255,0.25); }
-.rope-3 { top: 28%; background: rgba(255,50,50,0.5); }
+.rope-1 {
+    top: 6%;
+    background: linear-gradient(90deg, rgba(180,30,30,0.2) 0%, rgba(220,40,40,0.6) 30%, rgba(255,60,60,0.7) 50%, rgba(220,40,40,0.6) 70%, rgba(180,30,30,0.2) 100%);
+    box-shadow: 0 0 6px rgba(255,50,50,0.2), 0 1px 0 rgba(255,100,100,0.15);
+    height: 3px;
+}
 
-/* ===== OPPONENT (FIRST PERSON VIEW) ===== */
+.rope-2 {
+    top: 16%;
+    background: linear-gradient(90deg, rgba(200,200,200,0.1) 0%, rgba(255,255,255,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.3) 70%, rgba(200,200,200,0.1) 100%);
+    box-shadow: 0 0 4px rgba(255,255,255,0.1), 0 1px 0 rgba(255,255,255,0.08);
+    height: 2px;
+}
+
+.rope-3 {
+    top: 26%;
+    background: linear-gradient(90deg, rgba(180,30,30,0.2) 0%, rgba(220,40,40,0.5) 30%, rgba(255,60,60,0.6) 50%, rgba(220,40,40,0.5) 70%, rgba(180,30,30,0.2) 100%);
+    box-shadow: 0 0 6px rgba(255,50,50,0.15), 0 1px 0 rgba(255,100,100,0.1);
+    height: 3px;
+}
+
+/* ===== OPPONENT (3D FIRST PERSON VIEW) ===== */
 .opp-fighter {
     position: absolute;
     bottom: 22%;
@@ -1921,6 +1997,20 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     z-index: 3;
     transition: transform 0.15s ease;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
+}
+
+/* Shadow on floor beneath opponent */
+.opp-fighter::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 16px;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.5) 0%, transparent 70%);
+    border-radius: 50%;
 }
 
 .opp-fighter.hit-stagger {
@@ -1947,12 +2037,13 @@ input[type="range"]::-moz-range-thumb {
     100% { transform: translateX(-50%); }
 }
 
+/* 3D Head */
 .opp-head {
-    width: 52px;
-    height: 52px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
     position: relative;
-    margin-bottom: -4px;
+    margin-bottom: -6px;
     z-index: 2;
 }
 
@@ -1963,62 +2054,107 @@ input[type="range"]::-moz-range-thumb {
     background: #D4A574;
     position: relative;
     overflow: hidden;
+    box-shadow:
+        inset -8px -4px 12px rgba(0,0,0,0.35),
+        inset 6px 6px 10px rgba(255,255,255,0.12),
+        0 2px 8px rgba(0,0,0,0.4);
 }
 
+/* Eyes */
 .opp-head-inner::before {
     content: '';
     position: absolute;
-    top: 35%;
+    top: 36%;
     left: 22%;
-    width: 12px;
+    width: 10px;
     height: 8px;
     border-radius: 50%;
-    background: #222;
-    box-shadow: 20px 0 0 #222;
+    background: #1a1a1a;
+    box-shadow:
+        20px 0 0 #1a1a1a,
+        1px -1px 0 1px rgba(255,255,255,0.15),
+        21px -1px 0 1px rgba(255,255,255,0.15);
 }
 
+/* Mouth */
 .opp-head-inner::after {
     content: '';
     position: absolute;
-    bottom: 25%;
+    bottom: 22%;
     left: 50%;
     transform: translateX(-50%);
-    width: 8px;
-    height: 3px;
-    border-radius: 0 0 4px 4px;
-    background: rgba(0,0,0,0.2);
+    width: 10px;
+    height: 4px;
+    border-radius: 0 0 5px 5px;
+    background: rgba(0,0,0,0.25);
 }
 
+/* 3D Body */
 .opp-body-zone {
     position: relative;
-    width: 72px;
-    height: 80px;
+    width: 82px;
+    height: 90px;
     display: flex;
     justify-content: center;
 }
 
 .opp-torso {
-    width: 56px;
-    height: 72px;
-    background: linear-gradient(180deg, #333 0%, #222 100%);
-    border-radius: 8px 8px 4px 4px;
-    border: 1px solid rgba(255,255,255,0.08);
+    width: 64px;
+    height: 80px;
+    background: linear-gradient(180deg, #3a3a4a 0%, #2a2a38 40%, #222230 100%);
+    border-radius: 10px 10px 6px 6px;
+    box-shadow:
+        inset -6px 0 12px rgba(0,0,0,0.4),
+        inset 6px 0 12px rgba(255,255,255,0.05),
+        inset 0 -8px 16px rgba(0,0,0,0.3),
+        0 4px 12px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.06);
 }
 
+/* Torso muscle definition */
+.opp-torso::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 50px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 100%);
+    border-radius: 1px;
+}
+
+/* Shoulders */
+.opp-torso::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -8px;
+    right: -8px;
+    height: 14px;
+    background: linear-gradient(180deg, rgba(50,50,65,0.9) 0%, transparent 100%);
+    border-radius: 20px 20px 0 0;
+}
+
+/* 3D Gloves */
 .opp-guard {
     position: absolute;
-    width: 20px;
-    height: 22px;
-    background: #CC2222;
+    width: 24px;
+    height: 26px;
+    background: radial-gradient(circle at 40% 35%, #EE3333 0%, #CC2222 50%, #991818 100%);
     border-radius: 50%;
     top: 8px;
     z-index: 3;
     transition: all 0.15s ease;
-    box-shadow: 0 0 6px rgba(200,0,0,0.3);
+    box-shadow:
+        0 0 8px rgba(200,0,0,0.35),
+        inset -3px -3px 6px rgba(0,0,0,0.4),
+        inset 2px 2px 4px rgba(255,100,100,0.2),
+        0 3px 6px rgba(0,0,0,0.3);
 }
 
-.opp-guard-l { left: 0; }
-.opp-guard-r { right: 0; }
+.opp-guard-l { left: -2px; }
+.opp-guard-r { right: -2px; }
 
 /* Opponent guarding up */
 .opp-fighter.guard-up .opp-guard-l {
@@ -2032,26 +2168,29 @@ input[type="range"]::-moz-range-thumb {
 
 /* Opponent winding up to punch */
 .opp-fighter.wind-left .opp-guard-l {
-    left: -14px;
-    top: 0;
-    transform: scale(1.15);
+    left: -18px;
+    top: -2px;
+    transform: scale(1.2);
+    box-shadow: 0 0 14px rgba(255,50,50,0.5), inset -3px -3px 6px rgba(0,0,0,0.4);
 }
 
 .opp-fighter.wind-right .opp-guard-r {
-    right: -14px;
-    top: 0;
-    transform: scale(1.15);
+    right: -18px;
+    top: -2px;
+    transform: scale(1.2);
+    box-shadow: 0 0 14px rgba(255,50,50,0.5), inset -3px -3px 6px rgba(0,0,0,0.4);
 }
 
 .opp-fighter.wind-body .opp-guard-l,
 .opp-fighter.wind-body .opp-guard-r {
-    top: 20px;
+    top: 22px;
 }
 
 .opp-fighter.wind-upper .opp-guard-r {
-    top: 24px;
+    top: 26px;
     right: 6px;
-    transform: scale(1.2);
+    transform: scale(1.25);
+    box-shadow: 0 0 14px rgba(255,50,50,0.5), inset -3px -3px 6px rgba(0,0,0,0.4);
 }
 
 /* ===== INCOMING ATTACK INDICATOR ===== */
@@ -2129,7 +2268,7 @@ input[type="range"]::-moz-range-thumb {
     animation: hitTextPop 0.3s ease;
 }
 
-/* Flash overlay */
+/* Flash overlay — cinematic hit effects */
 .fight-flash {
     position: absolute;
     inset: 0;
@@ -2140,45 +2279,89 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .fight-flash.player-hit {
-    background: radial-gradient(ellipse at 50% 60%, rgba(255,30,30,0.5), transparent 70%);
+    background:
+        radial-gradient(ellipse at 50% 60%, rgba(255,20,20,0.55) 0%, transparent 65%),
+        linear-gradient(180deg, rgba(255,0,0,0.1) 0%, transparent 40%);
     opacity: 1;
+    animation: flashShake 0.15s ease;
 }
 
 .fight-flash.opp-hit {
-    background: radial-gradient(ellipse at 50% 50%, rgba(255,215,0,0.35), transparent 65%);
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(255,230,100,0.4) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.15) 0%, transparent 30%);
     opacity: 1;
 }
 
-/* ===== PLAYER GLOVES (FIRST PERSON) ===== */
+@keyframes flashShake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    50% { transform: translateX(3px); }
+    75% { transform: translateX(-2px); }
+    100% { transform: translateX(0); }
+}
+
+/* ===== PLAYER GLOVES (3D FIRST PERSON) ===== */
 .player-gloves {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 30%;
+    height: 35%;
     pointer-events: none;
     z-index: 6;
 }
 
 .glove {
     position: absolute;
-    bottom: -5px;
-    width: 52px;
-    height: 52px;
-    background: #CC2222;
-    border-radius: 50% 50% 45% 45%;
-    border: 2px solid #991111;
-    box-shadow: 0 0 15px rgba(200,0,0,0.3), inset 0 -5px 10px rgba(0,0,0,0.3);
+    bottom: -8px;
+    width: 62px;
+    height: 60px;
+    background: radial-gradient(ellipse at 45% 40%, #EE3333 0%, #CC2222 40%, #991515 80%, #771010 100%);
+    border-radius: 50% 50% 42% 42%;
+    border: 1px solid rgba(150,20,20,0.6);
+    box-shadow:
+        0 0 20px rgba(200,0,0,0.25),
+        inset 0 -8px 16px rgba(0,0,0,0.45),
+        inset 4px 4px 8px rgba(255,120,120,0.2),
+        inset -4px 0 8px rgba(0,0,0,0.2),
+        0 4px 12px rgba(0,0,0,0.4);
     transition: all 0.1s ease;
 }
 
+/* Lacing / knuckle detail */
+.glove::before {
+    content: '';
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    border-radius: 2px;
+}
+
+/* Wrist/arm hint */
+.glove::after {
+    content: '';
+    position: absolute;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 24px;
+    background: linear-gradient(180deg, rgba(180,130,90,0.6) 0%, rgba(180,130,90,0) 100%);
+    border-radius: 4px;
+}
+
 .glove-left {
-    left: 15%;
+    left: 12%;
     transform: rotate(15deg);
 }
 
 .glove-right {
-    right: 15%;
+    right: 12%;
     transform: rotate(-15deg);
 }
 
@@ -2241,6 +2424,28 @@ input[type="range"]::-moz-range-thumb {
     0% { transform: rotate(0deg); }
     50% { transform: translateY(-30%) scale(0.9); }
     100% { transform: rotate(0deg); }
+}
+
+/* Arena vignette + ambient light */
+.fight-arena::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 35%, transparent 30%, rgba(0,0,0,0.55) 100%);
+    z-index: 4;
+    pointer-events: none;
+}
+
+.fight-arena::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 25%;
+    right: 25%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(255,220,150,0.15), transparent);
+    z-index: 4;
+    pointer-events: none;
 }
 
 /* ===== SWIPE OVERLAY (INVISIBLE, FULL SCREEN) ===== */

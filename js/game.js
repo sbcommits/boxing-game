@@ -1960,8 +1960,11 @@ function startFight() {
     document.getElementById('fight-hit-text').textContent = '';
     document.getElementById('fight-combo').textContent = '';
 
-    // Style opponent based on their appearance
-    styleOpponent();
+    // Initialize canvas renderer and style opponent
+    setTimeout(function() {
+        initFightCanvas();
+        styleOpponent();
+    }, 100);
 
     // Initialize swipe controls
     initSwipeControls();
@@ -1992,34 +1995,119 @@ function startFight() {
     }, 800);
 }
 
+// ===== CANVAS OPPONENT RENDERER =====
+
+let fightCanvas = null;
+let fightCtx = null;
+let canvasAnimId = null;
+
+const opp3D = {
+    skinColor: '#D4A574',
+    skinDark: '#B8895A',
+    skinLight: '#E8C4A0',
+    trunksColor: '#CC2222',
+    gloveColor: '#CC2222',
+    // Idle animation
+    bobPhase: 0,
+    breathPhase: 0,
+    swayX: 0,
+    // Body state
+    bodyAngle: 0,
+    headX: 0,
+    headY: 0,
+    // Arms: 0 = guard position, 1 = fully extended
+    leftArmExt: 0,
+    rightArmExt: 0,
+    leftArmAngle: 0,
+    rightArmAngle: 0,
+    guardUp: true,
+    // Incoming punch (fist coming at camera)
+    punch: null, // { type, side, progress, duration, startTime, targetX, targetY }
+    // Hit reaction
+    hitReact: null, // { dx, dy, rot, progress, startTime, duration }
+    // Screen shake
+    shakeX: 0, shakeY: 0
+};
+
+function initFightCanvas() {
+    fightCanvas = document.getElementById('fight-canvas');
+    if (!fightCanvas) return;
+    const rect = fightCanvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    fightCanvas.width = rect.width * dpr;
+    fightCanvas.height = rect.height * dpr;
+    fightCanvas.style.width = rect.width + 'px';
+    fightCanvas.style.height = rect.height + 'px';
+    fightCtx = fightCanvas.getContext('2d');
+    fightCtx.scale(dpr, dpr);
+
+    // Reset state
+    opp3D.bobPhase = 0;
+    opp3D.breathPhase = 0;
+    opp3D.punch = null;
+    opp3D.hitReact = null;
+    opp3D.guardUp = true;
+    opp3D.leftArmExt = 0;
+    opp3D.rightArmExt = 0;
+    opp3D.shakeX = 0;
+    opp3D.shakeY = 0;
+
+    startCanvasLoop();
+}
+
+function startCanvasLoop() {
+    if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
+    let lastTime = performance.now();
+
+    function loop(now) {
+        const dt = (now - lastTime) / 1000;
+        lastTime = now;
+        updateOppAnimation(dt);
+        drawFightScene();
+        canvasAnimId = requestAnimationFrame(loop);
+    }
+    canvasAnimId = requestAnimationFrame(loop);
+}
+
+function stopCanvasLoop() {
+    if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
+    canvasAnimId = null;
+}
+
 function styleOpponent() {
     const opp = currentOpponent;
-    const head = document.getElementById('opp-head-inner');
-    if (!head) return;
-
-    // Skin color from opponent appearance
     const skins = {
         light: '#F5D0B0', medium: '#D4A574', tan: '#C68E5B',
         brown: '#8B6240', dark: '#4A3428', pale: '#FFE4D0'
     };
-    const skinColor = skins[opp.appearance?.skinTone] || '#D4A574';
-    head.style.background = skinColor;
+    const skinBase = skins[opp.appearance?.skinTone] || '#D4A574';
+    opp3D.skinColor = skinBase;
 
-    // Trunk color
-    const torso = document.getElementById('opp-torso');
-    if (torso && opp.appearance?.trunkColor) {
-        const colors = {
-            red: '#CC2222', blue: '#2255BB', black: '#222',
-            white: '#DDD', green: '#228833', gold: '#AA8822',
-            purple: '#6633AA', pink: '#CC4488'
-        };
-        torso.style.background = 'linear-gradient(180deg, ' + (colors[opp.appearance.trunkColor] || '#333') + ', #222)';
+    // Darken/lighten helpers
+    function shade(hex, amt) {
+        let r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+        r = Math.max(0, Math.min(255, r + amt));
+        g = Math.max(0, Math.min(255, g + amt));
+        b = Math.max(0, Math.min(255, b + amt));
+        return '#' + [r,g,b].map(c => c.toString(16).padStart(2,'0')).join('');
     }
+    opp3D.skinDark = shade(skinBase, -40);
+    opp3D.skinLight = shade(skinBase, 35);
+
+    const trunkColors = {
+        red: '#CC2222', blue: '#2255BB', black: '#333',
+        white: '#DDD', green: '#228833', gold: '#AA8822',
+        purple: '#6633AA', pink: '#CC4488'
+    };
+    opp3D.trunksColor = trunkColors[opp.appearance?.trunkColor] || '#CC2222';
 }
 
 function resetOppPose() {
-    const opp = document.getElementById('opp-fighter');
-    if (opp) opp.className = 'opp-fighter';
+    opp3D.bodyAngle = 0;
+    opp3D.leftArmExt = 0;
+    opp3D.rightArmExt = 0;
+    opp3D.guardUp = true;
+    if (opp3D.punch) opp3D.punch = null;
 }
 
 function resetGloves() {
@@ -2029,8 +2117,450 @@ function resetGloves() {
     if (r) r.className = 'glove glove-right';
 }
 
+// ===== ANIMATION UPDATE =====
+
+function updateOppAnimation(dt) {
+    const o = opp3D;
+
+    // Idle bob and sway
+    o.bobPhase += dt * 2.5;
+    o.breathPhase += dt * 1.5;
+    o.swayX = Math.sin(o.bobPhase * 0.7) * 2;
+
+    // Hit reaction decay
+    if (o.hitReact) {
+        const elapsed = (performance.now() - o.hitReact.startTime) / o.hitReact.duration;
+        if (elapsed >= 1) {
+            o.hitReact = null;
+            o.headX = 0; o.headY = 0; o.bodyAngle = 0;
+        } else {
+            const ease = 1 - elapsed;
+            o.headX = o.hitReact.dx * ease;
+            o.headY = o.hitReact.dy * ease;
+            o.bodyAngle = o.hitReact.rot * ease;
+        }
+    }
+
+    // Punch animation progress
+    if (o.punch) {
+        const elapsed = performance.now() - o.punch.startTime;
+        o.punch.progress = Math.min(1, elapsed / o.punch.duration);
+
+        // Wind-up: first 30%, arm pulls back
+        // Delivery: 30-70%, fist comes at camera
+        // Hold: 70-100%, lingers then retracts
+        if (o.punch.progress >= 1) {
+            // Punch animation complete — handled by fight engine
+        }
+    }
+
+    // Shake decay
+    o.shakeX *= 0.85;
+    o.shakeY *= 0.85;
+    if (Math.abs(o.shakeX) < 0.5) o.shakeX = 0;
+    if (Math.abs(o.shakeY) < 0.5) o.shakeY = 0;
+}
+
+// ===== CANVAS DRAWING =====
+
+function drawFightScene() {
+    if (!fightCtx || !fightCanvas) return;
+    const ctx = fightCtx;
+    const W = fightCanvas.width / (window.devicePixelRatio || 1);
+    const H = fightCanvas.height / (window.devicePixelRatio || 1);
+
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(opp3D.shakeX, opp3D.shakeY);
+
+    drawOpponent(ctx, W, H);
+
+    // Draw incoming punch fist (on top of everything)
+    if (opp3D.punch && opp3D.punch.progress > 0.25) {
+        drawIncomingFist(ctx, W, H);
+    }
+
+    ctx.restore();
+}
+
+function drawOpponent(ctx, W, H) {
+    const o = opp3D;
+    const cx = W / 2 + o.swayX;
+    const baseY = H * 0.38;
+    const bob = Math.sin(o.bobPhase) * 2;
+    const cy = baseY + bob;
+    const breath = Math.sin(o.breathPhase) * 1;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(o.bodyAngle);
+
+    // Scale based on screen width for proportions
+    const sc = Math.min(W / 400, H / 700) * 1.1;
+
+    // Shadow on floor
+    ctx.save();
+    ctx.scale(1, 0.3);
+    ctx.beginPath();
+    ctx.ellipse(0, 200 * sc, 50 * sc, 30 * sc, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+    ctx.restore();
+
+    // ===== TORSO =====
+    ctx.save();
+    // Shoulders
+    const shoulderW = 55 * sc;
+    const torsoH = 75 * sc;
+
+    // Neck
+    ctx.fillStyle = o.skinDark;
+    ctx.fillRect(-8 * sc, -torsoH * 0.55 - 12 * sc, 16 * sc, 18 * sc);
+
+    // Body (tank top)
+    const torsoGrad = ctx.createLinearGradient(0, -torsoH * 0.5, 0, torsoH * 0.5);
+    torsoGrad.addColorStop(0, '#383845');
+    torsoGrad.addColorStop(0.4, '#2c2c3a');
+    torsoGrad.addColorStop(1, '#222230');
+    ctx.fillStyle = torsoGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(-shoulderW, -torsoH * 0.45);
+    ctx.quadraticCurveTo(-shoulderW - 4 * sc, torsoH * 0.1, -40 * sc, torsoH * 0.5);
+    ctx.lineTo(40 * sc, torsoH * 0.5);
+    ctx.quadraticCurveTo(shoulderW + 4 * sc, torsoH * 0.1, shoulderW, -torsoH * 0.45);
+    ctx.closePath();
+    ctx.fill();
+
+    // Shoulder caps (deltoids)
+    function drawDelt(side) {
+        const sx = side * shoulderW;
+        const deltGrad = ctx.createRadialGradient(sx, -torsoH * 0.38, 2 * sc, sx, -torsoH * 0.38, 22 * sc);
+        deltGrad.addColorStop(0, o.skinLight);
+        deltGrad.addColorStop(1, o.skinDark);
+        ctx.beginPath();
+        ctx.ellipse(sx, -torsoH * 0.38, 20 * sc, 16 * sc, 0, 0, Math.PI * 2);
+        ctx.fillStyle = deltGrad;
+        ctx.fill();
+    }
+    drawDelt(-1);
+    drawDelt(1);
+
+    // Chest line
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -torsoH * 0.35);
+    ctx.lineTo(0, torsoH * 0.2);
+    ctx.stroke();
+
+    // Trunks
+    const trunkGrad = ctx.createLinearGradient(0, torsoH * 0.4, 0, torsoH * 0.7 + breath);
+    trunkGrad.addColorStop(0, o.trunksColor);
+    trunkGrad.addColorStop(1, '#111');
+    ctx.fillStyle = trunkGrad;
+    ctx.fillRect(-42 * sc, torsoH * 0.4, 84 * sc, 30 * sc + breath);
+
+    // Trunk waistband
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(-42 * sc, torsoH * 0.38, 84 * sc, 4 * sc);
+
+    ctx.restore();
+
+    // ===== ARMS =====
+    // Draw arms based on guard/punch state
+    drawArm(ctx, -1, sc, torsoH, shoulderW); // left arm
+    drawArm(ctx, 1, sc, torsoH, shoulderW);  // right arm
+
+    // ===== HEAD =====
+    const hx = o.headX;
+    const hy = o.headY;
+    const headR = 26 * sc;
+    const headY = -torsoH * 0.55 - headR - 8 * sc;
+
+    ctx.save();
+    ctx.translate(hx, hy);
+
+    // Head shape
+    const headGrad = ctx.createRadialGradient(
+        -headR * 0.2, headY - headR * 0.2, headR * 0.15,
+        0, headY, headR
+    );
+    headGrad.addColorStop(0, o.skinLight);
+    headGrad.addColorStop(0.6, o.skinColor);
+    headGrad.addColorStop(1, o.skinDark);
+    ctx.beginPath();
+    ctx.ellipse(0, headY, headR, headR * 1.05, 0, 0, Math.PI * 2);
+    ctx.fillStyle = headGrad;
+    ctx.fill();
+
+    // Eyes
+    const eyeY = headY - 2 * sc;
+    const eyeSpacing = 9 * sc;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.ellipse(-eyeSpacing, eyeY, 4 * sc, 3.5 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(eyeSpacing, eyeY, 4 * sc, 3.5 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye highlights
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(-eyeSpacing + 1.5 * sc, eyeY - 1 * sc, 1.5 * sc, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(eyeSpacing + 1.5 * sc, eyeY - 1 * sc, 1.5 * sc, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyebrows (furrowed — fighting)
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 2.5 * sc;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-eyeSpacing - 5 * sc, eyeY - 6 * sc);
+    ctx.lineTo(-eyeSpacing + 4 * sc, eyeY - 8 * sc);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(eyeSpacing + 5 * sc, eyeY - 6 * sc);
+    ctx.lineTo(eyeSpacing - 4 * sc, eyeY - 8 * sc);
+    ctx.stroke();
+
+    // Nose
+    ctx.fillStyle = o.skinDark;
+    ctx.beginPath();
+    ctx.moveTo(0, eyeY + 3 * sc);
+    ctx.lineTo(-3 * sc, eyeY + 10 * sc);
+    ctx.lineTo(3 * sc, eyeY + 10 * sc);
+    ctx.closePath();
+    ctx.fill();
+
+    // Mouth (slight grimace)
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1.5 * sc;
+    ctx.beginPath();
+    ctx.moveTo(-5 * sc, eyeY + 16 * sc);
+    ctx.quadraticCurveTo(0, eyeY + 18 * sc, 5 * sc, eyeY + 16 * sc);
+    ctx.stroke();
+
+    // Ears
+    ctx.fillStyle = o.skinColor;
+    ctx.beginPath();
+    ctx.ellipse(-headR - 2 * sc, headY, 4 * sc, 6 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(headR + 2 * sc, headY, 4 * sc, 6 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    ctx.restore();
+}
+
+function drawArm(ctx, side, sc, torsoH, shoulderW) {
+    const o = opp3D;
+    // If this arm is punching, don't draw it here (drawn as incoming fist instead)
+    if (o.punch && o.punch.progress > 0.2) {
+        if ((side === -1 && o.punch.side === 'left') || (side === 1 && o.punch.side === 'right')) {
+            return; // arm is being drawn as incoming fist
+        }
+    }
+
+    const sx = side * shoulderW; // shoulder x
+    const sy = -torsoH * 0.38;  // shoulder y
+    const armLen = 35 * sc;
+    const forearmLen = 30 * sc;
+    const gloveR = 14 * sc;
+
+    ctx.save();
+
+    // Guard position: arms bent, gloves near face
+    const guardAngle = side * 0.35;
+    const elbowAngle = side * -2.2;
+
+    // Upper arm
+    const elbowX = sx + Math.sin(guardAngle) * armLen;
+    const elbowY = sy + Math.cos(guardAngle) * armLen;
+
+    // Upper arm
+    ctx.strokeStyle = o.skinColor;
+    ctx.lineWidth = 12 * sc;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(elbowX, elbowY);
+    ctx.stroke();
+
+    // Forearm
+    const fistX = elbowX + Math.sin(elbowAngle) * forearmLen;
+    const fistY = elbowY - Math.cos(Math.abs(elbowAngle)) * forearmLen * 0.6;
+
+    ctx.strokeStyle = o.skinColor;
+    ctx.lineWidth = 10 * sc;
+    ctx.beginPath();
+    ctx.moveTo(elbowX, elbowY);
+    ctx.lineTo(fistX, fistY);
+    ctx.stroke();
+
+    // Glove
+    const gGrad = ctx.createRadialGradient(fistX - 2 * sc, fistY - 2 * sc, 2, fistX, fistY, gloveR);
+    gGrad.addColorStop(0, '#FF4444');
+    gGrad.addColorStop(0.5, '#CC2222');
+    gGrad.addColorStop(1, '#881111');
+    ctx.beginPath();
+    ctx.arc(fistX, fistY, gloveR, 0, Math.PI * 2);
+    ctx.fillStyle = gGrad;
+    ctx.fill();
+
+    // Glove highlight
+    ctx.beginPath();
+    ctx.arc(fistX - 3 * sc, fistY - 3 * sc, 4 * sc, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,150,150,0.25)';
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// ===== INCOMING FIST (PUNCH COMING AT CAMERA) =====
+
+function drawIncomingFist(ctx, W, H) {
+    const p = opp3D.punch;
+    if (!p) return;
+
+    // Progress phases: 0-0.25 wind-up, 0.25-0.75 delivery, 0.75-1.0 linger/retract
+    let deliveryProg = 0;
+    if (p.progress < 0.25) {
+        deliveryProg = 0;
+    } else if (p.progress < 0.75) {
+        deliveryProg = (p.progress - 0.25) / 0.5;
+    } else {
+        deliveryProg = 1 - (p.progress - 0.75) / 0.25; // retract
+    }
+
+    // Ease in for impact feel
+    const ease = deliveryProg < 0.5
+        ? 2 * deliveryProg * deliveryProg
+        : 1 - Math.pow(-2 * deliveryProg + 2, 2) / 2;
+
+    const startX = W / 2 + (p.side === 'left' ? -30 : 30);
+    const startY = H * 0.25;
+    const endX = p.targetX || W / 2;
+    const endY = p.targetY || H * 0.75;
+
+    const x = startX + (endX - startX) * ease;
+    const y = startY + (endY - startY) * ease;
+    const scale = 0.4 + ease * 2.8; // starts small, gets big as it approaches
+    const fistR = 16 * scale;
+
+    // Motion trail
+    if (ease > 0.2) {
+        ctx.globalAlpha = 0.15;
+        for (let i = 3; i >= 1; i--) {
+            const trailEase = Math.max(0, ease - i * 0.08);
+            const tx = startX + (endX - startX) * trailEase;
+            const ty = startY + (endY - startY) * trailEase;
+            const ts = 0.4 + trailEase * 2.8;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 14 * ts, 0, Math.PI * 2);
+            ctx.fillStyle = '#CC2222';
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // Arm behind fist
+    if (ease > 0.1) {
+        ctx.strokeStyle = opp3D.skinColor;
+        ctx.lineWidth = 10 * Math.min(scale, 1.5);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        const armStartX = startX + (x - startX) * 0.3;
+        const armStartY = startY + (y - startY) * 0.3;
+        ctx.moveTo(armStartX, armStartY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+    }
+
+    // Fist (3D glove)
+    const gGrad = ctx.createRadialGradient(x - fistR * 0.2, y - fistR * 0.25, fistR * 0.1, x, y, fistR);
+    gGrad.addColorStop(0, '#FF5555');
+    gGrad.addColorStop(0.4, '#DD2828');
+    gGrad.addColorStop(0.8, '#AA1515');
+    gGrad.addColorStop(1, '#771010');
+    ctx.beginPath();
+    ctx.arc(x, y, fistR, 0, Math.PI * 2);
+    ctx.fillStyle = gGrad;
+    ctx.fill();
+
+    // Glove highlight
+    ctx.beginPath();
+    ctx.arc(x - fistR * 0.25, y - fistR * 0.3, fistR * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,180,180,0.3)';
+    ctx.fill();
+
+    // Knuckle line
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - fistR * 0.5, y);
+    ctx.lineTo(x + fistR * 0.5, y);
+    ctx.stroke();
+}
+
+// ===== TRIGGER ANIMATIONS (called by fight engine) =====
+
+function triggerOppPunch(attack) {
+    const W = fightCanvas ? (fightCanvas.width / (window.devicePixelRatio || 1)) : 400;
+    const H = fightCanvas ? (fightCanvas.height / (window.devicePixelRatio || 1)) : 700;
+
+    const targets = {
+        'wind-left':  { x: W * 0.6,  y: H * 0.7,  side: 'left' },
+        'wind-right': { x: W * 0.4,  y: H * 0.7,  side: 'right' },
+        'wind-upper': { x: W * 0.5,  y: H * 0.65, side: 'right' },
+        'wind-body':  { x: W * 0.5,  y: H * 0.8,  side: 'left' }
+    };
+    const t = targets[attack.wind] || targets['wind-right'];
+
+    opp3D.punch = {
+        type: attack.type,
+        side: t.side,
+        progress: 0,
+        duration: fightState ? fightState.aiWindDuration : 800,
+        startTime: performance.now(),
+        targetX: t.x,
+        targetY: t.y
+    };
+}
+
+function triggerHitReaction(punchType) {
+    const reactions = {
+        jab:      { dx: 6,   dy: -2,  rot: 0.03 },
+        cross:    { dx: -10, dy: -3,  rot: -0.05 },
+        hook:     { dx: 15,  dy: 0,   rot: 0.08 },
+        uppercut: { dx: 0,   dy: -12, rot: -0.04 },
+        body:     { dx: 0,   dy: 4,   rot: 0.02 }
+    };
+    const r = reactions[punchType] || reactions.jab;
+    opp3D.hitReact = {
+        dx: r.dx, dy: r.dy, rot: r.rot,
+        startTime: performance.now(),
+        duration: 350
+    };
+}
+
+function triggerScreenShake(intensity) {
+    opp3D.shakeX = (Math.random() - 0.5) * intensity;
+    opp3D.shakeY = (Math.random() - 0.5) * intensity * 0.7;
+}
+
+function staggerOpponent() {
+    triggerHitReaction('cross');
+}
+
 function startFightLoop() {
     if (fightLoopId) cancelAnimationFrame(fightLoopId);
+    stopCanvasLoop();
     function loop() {
         if (!fightState || fightState.isOver) return;
         fightTick();
@@ -2101,30 +2631,12 @@ function pickAIAttack(fs, now) {
     fs.defended = false;
     fs.defendWindow = true;
 
-    // Visual: opponent winds up
-    const opp = document.getElementById('opp-fighter');
-    if (opp) opp.className = 'opp-fighter ' + attack.wind;
-
-    // Show incoming indicator
-    showIncoming(attack);
-}
-
-function showIncoming(attack) {
-    const el = document.getElementById('incoming-indicator');
-    const symbols = {
-        'wind-left': '\u25C0',   // ◀
-        'wind-right': '\u25B6',  // ▶
-        'wind-upper': '\u25B2',  // ▲
-        'wind-body': '\u25BC'    // ▼
-    };
-    el.textContent = symbols[attack.wind] || '!';
-    el.className = 'incoming-indicator active';
+    // Visual: opponent punch animation on canvas
+    triggerOppPunch(attack);
 }
 
 function hideIncoming() {
-    const el = document.getElementById('incoming-indicator');
-    el.className = 'incoming-indicator';
-    el.textContent = '';
+    opp3D.punch = null;
 }
 
 function showHitText(text, cls) {
@@ -2437,7 +2949,7 @@ function throwPunch(type) {
         fs.roundPlayerPts += dmg;
 
         showFlash('opp-hit');
-        staggerOpponent();
+        triggerHitReaction(type);
         const label = inCounter ? 'COUNTER ' + punch.name.toUpperCase() + '! -' + dmg : punch.name.toUpperCase() + '! -' + dmg;
         showHitText(label, 'player-hit-text');
 
@@ -2603,6 +3115,7 @@ function landAIAttack(fs) {
         fs.roundOppPts += Math.round(dmg * 0.35);
         fs.oppPunchesThrown++;
         showFlash('player-hit');
+        triggerScreenShake(5);
         showHitText('BLOCKED -' + Math.round(dmg * 0.35), 'block-text');
 
         if (fs.playerHP <= 0) {
@@ -2630,6 +3143,7 @@ function landAIAttack(fs) {
     fs.comboCount = 0;
 
     showFlash('player-hit');
+    triggerScreenShake(dmg * 1.5);
     showHitText(attack.name.toUpperCase() + '! -' + dmg, 'opp-hit-text');
 
     // Knockdown
@@ -2637,6 +3151,7 @@ function landAIAttack(fs) {
         fs.knockdowns.player++;
         fs.playerHP -= 5;
         fs.roundOppPts += 10;
+        triggerScreenShake(25);
         showHitText('KNOCKDOWN!', 'knockdown');
 
         if (fs.playerHP <= 0 || fs.knockdowns.player >= 3) {
@@ -2700,6 +3215,7 @@ function updateScorecard() {
 function endRound(fs) {
     fs.paused = true;
     if (fightLoopId) cancelAnimationFrame(fightLoopId);
+    stopCanvasLoop();
     hideIncoming();
     resetOppPose();
     resetGloves();
@@ -2767,6 +3283,7 @@ function endRound(fs) {
                 fs.comboCount = 0;
                 fs.blocking = false;
                 startFightLoop();
+                startCanvasLoop();
                 startRoundTimer();
             }, 600);
         }, 800);
@@ -2786,6 +3303,7 @@ function endFight(winner, method, round) {
 
     // Stop fight loops
     if (fightLoopId) cancelAnimationFrame(fightLoopId);
+    stopCanvasLoop();
     if (fightTimerId) clearInterval(fightTimerId);
     hideIncoming();
     resetOppPose();

@@ -386,20 +386,8 @@
                     <div class="ring-floor"></div>
                 </div>
 
-                <!-- Opponent (facing you, large, centered) -->
-                <div class="opp-fighter" id="opp-fighter">
-                    <div class="opp-head" id="opp-head">
-                        <div class="opp-head-inner" id="opp-head-inner"></div>
-                    </div>
-                    <div class="opp-body-zone" id="opp-body-zone">
-                        <div class="opp-guard opp-guard-l" id="opp-guard-l"></div>
-                        <div class="opp-guard opp-guard-r" id="opp-guard-r"></div>
-                        <div class="opp-torso" id="opp-torso"></div>
-                    </div>
-                </div>
-
-                <!-- Incoming attack indicator -->
-                <div class="incoming-indicator" id="incoming-indicator"></div>
+                <!-- Canvas opponent renderer -->
+                <canvas id="fight-canvas" class="fight-canvas"></canvas>
 
                 <!-- Damage / action text -->
                 <div class="fight-hit-text" id="fight-hit-text"></div>

@@ -2187,171 +2187,403 @@ function drawFightScene() {
 function drawOpponent(ctx, W, H) {
     const o = opp3D;
     const cx = W / 2 + o.swayX;
-    const baseY = H * 0.38;
-    const bob = Math.sin(o.bobPhase) * 2;
+    const baseY = H * 0.40;
+    const bob = Math.sin(o.bobPhase) * 1.5;
     const cy = baseY + bob;
-    const breath = Math.sin(o.breathPhase) * 1;
+    const breath = Math.sin(o.breathPhase) * 0.8;
 
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(o.bodyAngle);
 
-    // Scale based on screen width for proportions
-    const sc = Math.min(W / 400, H / 700) * 1.1;
+    const sc = Math.min(W / 380, H / 650) * 1.2;
+    const shoulderW = 62 * sc;
+    const torsoH = 85 * sc;
 
     // Shadow on floor
     ctx.save();
-    ctx.scale(1, 0.3);
+    ctx.scale(1, 0.25);
     ctx.beginPath();
-    ctx.ellipse(0, 200 * sc, 50 * sc, 30 * sc, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.ellipse(0, 240 * sc, 55 * sc, 35 * sc, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.fill();
     ctx.restore();
 
-    // ===== TORSO =====
-    ctx.save();
-    // Shoulders
-    const shoulderW = 55 * sc;
-    const torsoH = 75 * sc;
+    // ===== BACK ARM (further from camera) =====
+    drawArm(ctx, 1, sc, torsoH, shoulderW);
 
-    // Neck
-    ctx.fillStyle = o.skinDark;
-    ctx.fillRect(-8 * sc, -torsoH * 0.55 - 12 * sc, 16 * sc, 18 * sc);
-
-    // Body (tank top)
-    const torsoGrad = ctx.createLinearGradient(0, -torsoH * 0.5, 0, torsoH * 0.5);
-    torsoGrad.addColorStop(0, '#383845');
-    torsoGrad.addColorStop(0.4, '#2c2c3a');
-    torsoGrad.addColorStop(1, '#222230');
-    ctx.fillStyle = torsoGrad;
-
+    // ===== NECK =====
+    const neckW = 14 * sc;
+    const neckH = 16 * sc;
+    const neckY = -torsoH * 0.52;
+    const neckGrad = ctx.createLinearGradient(-neckW, neckY - neckH, neckW, neckY);
+    neckGrad.addColorStop(0, o.skinColor);
+    neckGrad.addColorStop(1, o.skinDark);
+    ctx.fillStyle = neckGrad;
     ctx.beginPath();
-    ctx.moveTo(-shoulderW, -torsoH * 0.45);
-    ctx.quadraticCurveTo(-shoulderW - 4 * sc, torsoH * 0.1, -40 * sc, torsoH * 0.5);
-    ctx.lineTo(40 * sc, torsoH * 0.5);
-    ctx.quadraticCurveTo(shoulderW + 4 * sc, torsoH * 0.1, shoulderW, -torsoH * 0.45);
+    ctx.moveTo(-neckW * 0.8, neckY - neckH);
+    ctx.lineTo(-neckW, neckY);
+    ctx.lineTo(neckW, neckY);
+    ctx.lineTo(neckW * 0.8, neckY - neckH);
+    ctx.closePath();
+    ctx.fill();
+    // Neck shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(-neckW, neckY - 4 * sc, neckW * 2, 4 * sc);
+
+    // ===== BARE TORSO (realistic anatomy) =====
+    // Trapezius / upper back connecting to shoulders
+    const trapGrad = ctx.createLinearGradient(0, -torsoH * 0.55, 0, -torsoH * 0.3);
+    trapGrad.addColorStop(0, o.skinColor);
+    trapGrad.addColorStop(1, o.skinDark);
+    ctx.fillStyle = trapGrad;
+    ctx.beginPath();
+    ctx.moveTo(-neckW, neckY);
+    ctx.quadraticCurveTo(-shoulderW * 0.5, -torsoH * 0.42, -shoulderW, -torsoH * 0.38);
+    ctx.lineTo(shoulderW, -torsoH * 0.38);
+    ctx.quadraticCurveTo(shoulderW * 0.5, -torsoH * 0.42, neckW, neckY);
     ctx.closePath();
     ctx.fill();
 
-    // Shoulder caps (deltoids)
+    // Main torso shape (V-taper)
+    const bodyGrad = ctx.createLinearGradient(-shoulderW, 0, shoulderW, 0);
+    bodyGrad.addColorStop(0, o.skinDark);
+    bodyGrad.addColorStop(0.2, o.skinColor);
+    bodyGrad.addColorStop(0.5, o.skinLight);
+    bodyGrad.addColorStop(0.8, o.skinColor);
+    bodyGrad.addColorStop(1, o.skinDark);
+    ctx.fillStyle = bodyGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(-shoulderW, -torsoH * 0.38);
+    ctx.bezierCurveTo(-shoulderW - 2 * sc, -torsoH * 0.1, -shoulderW + 8 * sc, torsoH * 0.2, -38 * sc, torsoH * 0.42);
+    ctx.lineTo(38 * sc, torsoH * 0.42);
+    ctx.bezierCurveTo(shoulderW - 8 * sc, torsoH * 0.2, shoulderW + 2 * sc, -torsoH * 0.1, shoulderW, -torsoH * 0.38);
+    ctx.closePath();
+    ctx.fill();
+
+    // Vertical shadow for torso depth
+    const depthGrad = ctx.createLinearGradient(0, -torsoH * 0.4, 0, torsoH * 0.4);
+    depthGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    depthGrad.addColorStop(0.5, 'rgba(0,0,0,0.06)');
+    depthGrad.addColorStop(1, 'rgba(0,0,0,0.12)');
+    ctx.fillStyle = depthGrad;
+    ctx.fillRect(-shoulderW, -torsoH * 0.38, shoulderW * 2, torsoH * 0.8);
+
+    // Deltoids (shoulder muscles)
     function drawDelt(side) {
         const sx = side * shoulderW;
-        const deltGrad = ctx.createRadialGradient(sx, -torsoH * 0.38, 2 * sc, sx, -torsoH * 0.38, 22 * sc);
+        const dy = -torsoH * 0.38;
+        const deltGrad = ctx.createRadialGradient(sx + side * 2 * sc, dy - 4 * sc, 3 * sc, sx, dy, 24 * sc);
         deltGrad.addColorStop(0, o.skinLight);
+        deltGrad.addColorStop(0.6, o.skinColor);
         deltGrad.addColorStop(1, o.skinDark);
         ctx.beginPath();
-        ctx.ellipse(sx, -torsoH * 0.38, 20 * sc, 16 * sc, 0, 0, Math.PI * 2);
+        ctx.ellipse(sx, dy, 22 * sc, 17 * sc, side * 0.15, 0, Math.PI * 2);
         ctx.fillStyle = deltGrad;
         ctx.fill();
+        // Delt separation line
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sx, dy - 2 * sc, 14 * sc, Math.PI * 0.8, Math.PI * 1.2);
+        ctx.stroke();
     }
     drawDelt(-1);
     drawDelt(1);
 
-    // Chest line
-    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-    ctx.lineWidth = 1;
+    // ===== PECTORAL MUSCLES =====
+    function drawPec(side) {
+        const px = side * 18 * sc;
+        const py = -torsoH * 0.22;
+        const pecGrad = ctx.createRadialGradient(px + side * 4 * sc, py - 6 * sc, 2 * sc, px, py, 22 * sc);
+        pecGrad.addColorStop(0, o.skinLight);
+        pecGrad.addColorStop(0.5, o.skinColor);
+        pecGrad.addColorStop(1, 'rgba(0,0,0,0.05)');
+        ctx.beginPath();
+        ctx.ellipse(px, py, 22 * sc, 14 * sc + breath, side * 0.1, 0, Math.PI * 2);
+        ctx.fillStyle = pecGrad;
+        ctx.fill();
+    }
+    drawPec(-1);
+    drawPec(1);
+
+    // Chest separation line (sternum)
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 1.5 * sc;
     ctx.beginPath();
-    ctx.moveTo(0, -torsoH * 0.35);
-    ctx.lineTo(0, torsoH * 0.2);
+    ctx.moveTo(0, -torsoH * 0.38);
+    ctx.bezierCurveTo(-1 * sc, -torsoH * 0.2, 1 * sc, -torsoH * 0.05, 0, torsoH * 0.05);
     ctx.stroke();
 
-    // Trunks
-    const trunkGrad = ctx.createLinearGradient(0, torsoH * 0.4, 0, torsoH * 0.7 + breath);
+    // Pec lower shadow
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 1.5 * sc;
+    ctx.beginPath();
+    ctx.arc(-18 * sc, -torsoH * 0.22, 18 * sc, Math.PI * 0.1, Math.PI * 0.6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(18 * sc, -torsoH * 0.22, 18 * sc, Math.PI * 0.4, Math.PI * 0.9);
+    ctx.stroke();
+
+    // ===== ABS =====
+    for (let row = 0; row < 3; row++) {
+        for (let col = -1; col <= 1; col += 2) {
+            const ax = col * 10 * sc;
+            const ay = torsoH * (0.02 + row * 0.11);
+            const absGrad = ctx.createRadialGradient(ax, ay, 1 * sc, ax, ay, 10 * sc);
+            absGrad.addColorStop(0, o.skinLight);
+            absGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.beginPath();
+            ctx.ellipse(ax, ay, 9 * sc, 7 * sc, 0, 0, Math.PI * 2);
+            ctx.fillStyle = absGrad;
+            ctx.fill();
+        }
+    }
+    // Linea alba (center abs line)
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1.2 * sc;
+    ctx.beginPath();
+    ctx.moveTo(0, torsoH * 0.0);
+    ctx.lineTo(0, torsoH * 0.38);
+    ctx.stroke();
+    // Horizontal ab separations
+    for (let i = 0; i < 3; i++) {
+        const aly = torsoH * (0.06 + i * 0.11);
+        ctx.beginPath();
+        ctx.moveTo(-12 * sc, aly);
+        ctx.quadraticCurveTo(0, aly + 2 * sc, 12 * sc, aly);
+        ctx.stroke();
+    }
+
+    // ===== OBLIQUES (side muscles) =====
+    ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+    ctx.lineWidth = 1 * sc;
+    for (let i = 0; i < 3; i++) {
+        const oy = torsoH * (0.05 + i * 0.1);
+        // Left side
+        ctx.beginPath();
+        ctx.moveTo(-38 * sc + i * 3 * sc, oy - 4 * sc);
+        ctx.lineTo(-22 * sc, oy + 4 * sc);
+        ctx.stroke();
+        // Right side
+        ctx.beginPath();
+        ctx.moveTo(38 * sc - i * 3 * sc, oy - 4 * sc);
+        ctx.lineTo(22 * sc, oy + 4 * sc);
+        ctx.stroke();
+    }
+
+    // ===== BOXING TRUNKS =====
+    const trunkTop = torsoH * 0.38;
+    const trunkH = 35 * sc + breath;
+    const trunkGrad = ctx.createLinearGradient(0, trunkTop, 0, trunkTop + trunkH);
     trunkGrad.addColorStop(0, o.trunksColor);
-    trunkGrad.addColorStop(1, '#111');
+    trunkGrad.addColorStop(0.8, o.trunksColor);
+    trunkGrad.addColorStop(1, 'rgba(0,0,0,0.5)');
     ctx.fillStyle = trunkGrad;
-    ctx.fillRect(-42 * sc, torsoH * 0.4, 84 * sc, 30 * sc + breath);
-
-    // Trunk waistband
+    ctx.beginPath();
+    ctx.moveTo(-40 * sc, trunkTop);
+    ctx.lineTo(-42 * sc, trunkTop + trunkH);
+    ctx.lineTo(42 * sc, trunkTop + trunkH);
+    ctx.lineTo(40 * sc, trunkTop);
+    ctx.closePath();
+    ctx.fill();
+    // Sheen / fabric highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(-15 * sc, trunkTop + 4 * sc, 30 * sc, trunkH - 8 * sc);
+    // Waistband
     ctx.fillStyle = '#FFD700';
-    ctx.fillRect(-42 * sc, torsoH * 0.38, 84 * sc, 4 * sc);
+    ctx.fillRect(-41 * sc, trunkTop - 1 * sc, 82 * sc, 5 * sc);
+    // Waistband highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(-41 * sc, trunkTop - 1 * sc, 82 * sc, 2 * sc);
 
-    ctx.restore();
-
-    // ===== ARMS =====
-    // Draw arms based on guard/punch state
-    drawArm(ctx, -1, sc, torsoH, shoulderW); // left arm
-    drawArm(ctx, 1, sc, torsoH, shoulderW);  // right arm
+    // ===== FRONT ARM (closer to camera) =====
+    drawArm(ctx, -1, sc, torsoH, shoulderW);
 
     // ===== HEAD =====
     const hx = o.headX;
     const hy = o.headY;
-    const headR = 26 * sc;
-    const headY = -torsoH * 0.55 - headR - 8 * sc;
+    const headW = 28 * sc;
+    const headH = 32 * sc;
+    const headCy = -torsoH * 0.52 - neckH - headH * 0.7;
 
     ctx.save();
     ctx.translate(hx, hy);
 
-    // Head shape
+    // Head shape — more like a real skull (wider at top, tapered jaw)
     const headGrad = ctx.createRadialGradient(
-        -headR * 0.2, headY - headR * 0.2, headR * 0.15,
-        0, headY, headR
+        -headW * 0.15, headCy - headH * 0.15, headW * 0.1,
+        0, headCy, headH
     );
     headGrad.addColorStop(0, o.skinLight);
-    headGrad.addColorStop(0.6, o.skinColor);
+    headGrad.addColorStop(0.5, o.skinColor);
     headGrad.addColorStop(1, o.skinDark);
+
+    // Cranium (upper head)
     ctx.beginPath();
-    ctx.ellipse(0, headY, headR, headR * 1.05, 0, 0, Math.PI * 2);
+    ctx.moveTo(-headW, headCy - headH * 0.1);
+    ctx.bezierCurveTo(-headW, headCy - headH * 0.8, headW, headCy - headH * 0.8, headW, headCy - headH * 0.1);
+    // Jawline
+    ctx.bezierCurveTo(headW * 0.95, headCy + headH * 0.2, headW * 0.6, headCy + headH * 0.55, 0, headCy + headH * 0.65);
+    ctx.bezierCurveTo(-headW * 0.6, headCy + headH * 0.55, -headW * 0.95, headCy + headH * 0.2, -headW, headCy - headH * 0.1);
+    ctx.closePath();
     ctx.fillStyle = headGrad;
     ctx.fill();
 
-    // Eyes
-    const eyeY = headY - 2 * sc;
-    const eyeSpacing = 9 * sc;
-    ctx.fillStyle = '#1a1a1a';
+    // Forehead highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.beginPath();
-    ctx.ellipse(-eyeSpacing, eyeY, 4 * sc, 3.5 * sc, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(eyeSpacing, eyeY, 4 * sc, 3.5 * sc, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headCy - headH * 0.4, headW * 0.6, headH * 0.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Eye highlights
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    // Brow ridge shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
     ctx.beginPath();
-    ctx.arc(-eyeSpacing + 1.5 * sc, eyeY - 1 * sc, 1.5 * sc, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(eyeSpacing + 1.5 * sc, eyeY - 1 * sc, 1.5 * sc, 0, Math.PI * 2);
+    ctx.ellipse(0, headCy - headH * 0.1, headW * 0.85, 4 * sc, 0, 0, Math.PI);
     ctx.fill();
 
-    // Eyebrows (furrowed — fighting)
-    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-    ctx.lineWidth = 2.5 * sc;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-eyeSpacing - 5 * sc, eyeY - 6 * sc);
-    ctx.lineTo(-eyeSpacing + 4 * sc, eyeY - 8 * sc);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(eyeSpacing + 5 * sc, eyeY - 6 * sc);
-    ctx.lineTo(eyeSpacing - 4 * sc, eyeY - 8 * sc);
-    ctx.stroke();
+    // ===== EYES =====
+    const eyeY = headCy - headH * 0.02;
+    const eyeSpacing = 10 * sc;
+    const eyeW = 6 * sc;
+    const eyeH = 3.5 * sc;
 
-    // Nose
-    ctx.fillStyle = o.skinDark;
-    ctx.beginPath();
-    ctx.moveTo(0, eyeY + 3 * sc);
-    ctx.lineTo(-3 * sc, eyeY + 10 * sc);
-    ctx.lineTo(3 * sc, eyeY + 10 * sc);
-    ctx.closePath();
-    ctx.fill();
+    function drawEye(ex) {
+        // Eye socket shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.beginPath();
+        ctx.ellipse(ex, eyeY, eyeW + 2 * sc, eyeH + 2 * sc, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // White of eye
+        ctx.fillStyle = '#E8E0D8';
+        ctx.beginPath();
+        ctx.ellipse(ex, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Iris
+        ctx.fillStyle = '#3A2518';
+        ctx.beginPath();
+        ctx.arc(ex, eyeY + 0.5 * sc, 3 * sc, 0, Math.PI * 2);
+        ctx.fill();
+        // Pupil
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(ex, eyeY + 0.5 * sc, 1.5 * sc, 0, Math.PI * 2);
+        ctx.fill();
+        // Eye highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.arc(ex + 1 * sc, eyeY - 0.5 * sc, 1.2 * sc, 0, Math.PI * 2);
+        ctx.fill();
+        // Upper eyelid / lash line
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 1.5 * sc;
+        ctx.beginPath();
+        ctx.arc(ex, eyeY, eyeW, Math.PI, 0);
+        ctx.stroke();
+    }
+    drawEye(-eyeSpacing);
+    drawEye(eyeSpacing);
 
-    // Mouth (slight grimace)
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    // Eyebrows (thick, furrowed for fighting)
+    ctx.fillStyle = 'rgba(30,20,10,0.5)';
+    function drawBrow(bx, side) {
+        ctx.beginPath();
+        ctx.moveTo(bx - side * 8 * sc, eyeY - 7 * sc);
+        ctx.quadraticCurveTo(bx, eyeY - 11 * sc, bx + side * 7 * sc, eyeY - 8 * sc);
+        ctx.quadraticCurveTo(bx, eyeY - 9 * sc, bx - side * 8 * sc, eyeY - 7 * sc);
+        ctx.fill();
+    }
+    drawBrow(-eyeSpacing, -1);
+    drawBrow(eyeSpacing, 1);
+
+    // ===== NOSE =====
+    // Nose bridge
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
     ctx.lineWidth = 1.5 * sc;
     ctx.beginPath();
-    ctx.moveTo(-5 * sc, eyeY + 16 * sc);
-    ctx.quadraticCurveTo(0, eyeY + 18 * sc, 5 * sc, eyeY + 16 * sc);
+    ctx.moveTo(-1 * sc, eyeY + 2 * sc);
+    ctx.lineTo(-2 * sc, eyeY + 12 * sc);
     ctx.stroke();
-
-    // Ears
-    ctx.fillStyle = o.skinColor;
     ctx.beginPath();
-    ctx.ellipse(-headR - 2 * sc, headY, 4 * sc, 6 * sc, 0, 0, Math.PI * 2);
+    ctx.moveTo(1 * sc, eyeY + 2 * sc);
+    ctx.lineTo(2 * sc, eyeY + 12 * sc);
+    ctx.stroke();
+    // Nose tip / nostrils
+    ctx.fillStyle = o.skinDark;
+    ctx.beginPath();
+    ctx.moveTo(0, eyeY + 10 * sc);
+    ctx.bezierCurveTo(-5 * sc, eyeY + 14 * sc, -4 * sc, eyeY + 15 * sc, 0, eyeY + 13 * sc);
+    ctx.bezierCurveTo(4 * sc, eyeY + 15 * sc, 5 * sc, eyeY + 14 * sc, 0, eyeY + 10 * sc);
+    ctx.fill();
+    // Nostril shadows
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(-3 * sc, eyeY + 13 * sc, 2 * sc, 1.2 * sc, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(headR + 2 * sc, headY, 4 * sc, 6 * sc, 0, 0, Math.PI * 2);
+    ctx.ellipse(3 * sc, eyeY + 13 * sc, 2 * sc, 1.2 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ===== MOUTH =====
+    const mouthY = eyeY + 20 * sc;
+    // Lips
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.beginPath();
+    ctx.ellipse(0, mouthY, 7 * sc, 3 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Upper lip shape
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1.2 * sc;
+    ctx.beginPath();
+    ctx.moveTo(-6 * sc, mouthY);
+    ctx.quadraticCurveTo(-3 * sc, mouthY - 2 * sc, 0, mouthY - 1 * sc);
+    ctx.quadraticCurveTo(3 * sc, mouthY - 2 * sc, 6 * sc, mouthY);
+    ctx.stroke();
+    // Lower lip highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath();
+    ctx.ellipse(0, mouthY + 2 * sc, 5 * sc, 2 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Mouth line (mouthguard look — slightly open grimace)
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1 * sc;
+    ctx.beginPath();
+    ctx.moveTo(-5 * sc, mouthY);
+    ctx.lineTo(5 * sc, mouthY);
+    ctx.stroke();
+
+    // ===== CHIN =====
+    ctx.fillStyle = 'rgba(0,0,0,0.04)';
+    ctx.beginPath();
+    ctx.ellipse(0, mouthY + 10 * sc, 6 * sc, 5 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ===== EARS =====
+    function drawEar(ex, side) {
+        const earGrad = ctx.createRadialGradient(ex + side * 2 * sc, headCy, 2 * sc, ex, headCy, 7 * sc);
+        earGrad.addColorStop(0, o.skinColor);
+        earGrad.addColorStop(1, o.skinDark);
+        ctx.beginPath();
+        ctx.ellipse(ex, headCy + 2 * sc, 5 * sc, 8 * sc, side * 0.15, 0, Math.PI * 2);
+        ctx.fillStyle = earGrad;
+        ctx.fill();
+        // Inner ear
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.beginPath();
+        ctx.ellipse(ex + side * 1 * sc, headCy + 2 * sc, 3 * sc, 5 * sc, side * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    drawEar(-headW - 3 * sc, -1);
+    drawEar(headW + 3 * sc, 1);
+
+    // ===== JAW SHADOW =====
+    ctx.fillStyle = 'rgba(0,0,0,0.04)';
+    ctx.beginPath();
+    ctx.moveTo(-headW * 0.8, headCy + headH * 0.25);
+    ctx.quadraticCurveTo(0, headCy + headH * 0.7, headW * 0.8, headCy + headH * 0.25);
+    ctx.quadraticCurveTo(headW * 0.6, headCy + headH * 0.5, 0, headCy + headH * 0.65);
+    ctx.quadraticCurveTo(-headW * 0.6, headCy + headH * 0.5, -headW * 0.8, headCy + headH * 0.25);
     ctx.fill();
 
     ctx.restore();
@@ -2360,64 +2592,104 @@ function drawOpponent(ctx, W, H) {
 
 function drawArm(ctx, side, sc, torsoH, shoulderW) {
     const o = opp3D;
-    // If this arm is punching, don't draw it here (drawn as incoming fist instead)
     if (o.punch && o.punch.progress > 0.2) {
         if ((side === -1 && o.punch.side === 'left') || (side === 1 && o.punch.side === 'right')) {
-            return; // arm is being drawn as incoming fist
+            return;
         }
     }
 
-    const sx = side * shoulderW; // shoulder x
-    const sy = -torsoH * 0.38;  // shoulder y
-    const armLen = 35 * sc;
-    const forearmLen = 30 * sc;
-    const gloveR = 14 * sc;
+    const sx = side * shoulderW;
+    const sy = -torsoH * 0.38;
+    const upperArmLen = 38 * sc;
+    const forearmLen = 34 * sc;
+    const gloveR = 16 * sc;
+    const armThick = 14 * sc;
+    const forearmThick = 12 * sc;
 
     ctx.save();
 
-    // Guard position: arms bent, gloves near face
     const guardAngle = side * 0.35;
     const elbowAngle = side * -2.2;
 
-    // Upper arm
-    const elbowX = sx + Math.sin(guardAngle) * armLen;
-    const elbowY = sy + Math.cos(guardAngle) * armLen;
+    const elbowX = sx + Math.sin(guardAngle) * upperArmLen;
+    const elbowY = sy + Math.cos(guardAngle) * upperArmLen;
 
-    // Upper arm
-    ctx.strokeStyle = o.skinColor;
-    ctx.lineWidth = 12 * sc;
+    // Upper arm with muscle shape
+    const armGrad = ctx.createLinearGradient(sx, sy, elbowX, elbowY);
+    armGrad.addColorStop(0, o.skinLight);
+    armGrad.addColorStop(0.5, o.skinColor);
+    armGrad.addColorStop(1, o.skinDark);
+    ctx.strokeStyle = armGrad;
+    ctx.lineWidth = armThick;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     ctx.lineTo(elbowX, elbowY);
     ctx.stroke();
 
+    // Bicep bulge
+    const bicepX = (sx + elbowX) / 2 + side * 3 * sc;
+    const bicepY = (sy + elbowY) / 2;
+    ctx.beginPath();
+    ctx.ellipse(bicepX, bicepY, armThick * 0.5, armThick * 0.8, guardAngle, 0, Math.PI * 2);
+    ctx.fillStyle = o.skinLight;
+    ctx.globalAlpha = 0.15;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
     // Forearm
     const fistX = elbowX + Math.sin(elbowAngle) * forearmLen;
     const fistY = elbowY - Math.cos(Math.abs(elbowAngle)) * forearmLen * 0.6;
-
-    ctx.strokeStyle = o.skinColor;
-    ctx.lineWidth = 10 * sc;
+    const fGrad = ctx.createLinearGradient(elbowX, elbowY, fistX, fistY);
+    fGrad.addColorStop(0, o.skinColor);
+    fGrad.addColorStop(1, o.skinDark);
+    ctx.strokeStyle = fGrad;
+    ctx.lineWidth = forearmThick;
     ctx.beginPath();
     ctx.moveTo(elbowX, elbowY);
     ctx.lineTo(fistX, fistY);
     ctx.stroke();
 
-    // Glove
-    const gGrad = ctx.createRadialGradient(fistX - 2 * sc, fistY - 2 * sc, 2, fistX, fistY, gloveR);
-    gGrad.addColorStop(0, '#FF4444');
-    gGrad.addColorStop(0.5, '#CC2222');
-    gGrad.addColorStop(1, '#881111');
+    // Wrist wrap (white)
+    const wrapX = fistX - (fistX - elbowX) * 0.15;
+    const wrapY = fistY - (fistY - elbowY) * 0.15;
+    ctx.strokeStyle = 'rgba(220,220,220,0.5)';
+    ctx.lineWidth = 3 * sc;
     ctx.beginPath();
-    ctx.arc(fistX, fistY, gloveR, 0, Math.PI * 2);
+    ctx.moveTo(wrapX - side * 3 * sc, wrapY);
+    ctx.lineTo(wrapX + side * 3 * sc, wrapY);
+    ctx.stroke();
+
+    // Glove (realistic boxing glove)
+    const gGrad = ctx.createRadialGradient(fistX - side * 2 * sc, fistY - 3 * sc, 2, fistX, fistY, gloveR);
+    gGrad.addColorStop(0, '#FF5544');
+    gGrad.addColorStop(0.35, '#DD2822');
+    gGrad.addColorStop(0.7, '#BB1818');
+    gGrad.addColorStop(1, '#771010');
+    ctx.beginPath();
+    ctx.ellipse(fistX, fistY, gloveR, gloveR * 0.9, side * 0.2, 0, Math.PI * 2);
     ctx.fillStyle = gGrad;
+    ctx.fill();
+
+    // Glove thumb
+    ctx.beginPath();
+    ctx.ellipse(fistX + side * gloveR * 0.6, fistY + gloveR * 0.3, 5 * sc, 4 * sc, side * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#BB1818';
     ctx.fill();
 
     // Glove highlight
     ctx.beginPath();
-    ctx.arc(fistX - 3 * sc, fistY - 3 * sc, 4 * sc, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,150,150,0.25)';
+    ctx.ellipse(fistX - side * 3 * sc, fistY - 4 * sc, gloveR * 0.3, gloveR * 0.25, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,180,170,0.25)';
     ctx.fill();
+
+    // Glove lacing
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1 * sc;
+    ctx.beginPath();
+    ctx.moveTo(fistX - 4 * sc, fistY - gloveR * 0.3);
+    ctx.lineTo(fistX + 4 * sc, fistY - gloveR * 0.3);
+    ctx.stroke();
 
     ctx.restore();
 }
